@@ -1,14 +1,10 @@
-# ═══════════════════════════════════════════════════════════════════
-# PDF STUDIO PRO — Production Dockerfile for VPS & Easypanel
-# Multi-stage C++ Native Compilation + Node.js 20 Backend Runtime
-# ═══════════════════════════════════════════════════════════════════
-
 FROM node:20-bookworm-slim
 
-# Install C++ compiler, build tools and Unicode fonts for PDF rendering
+# Install C++ compiler, build tools, curl and Unicode fonts for PDF rendering
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     g++ \
+    curl \
     fonts-dejavu-core \
     fonts-liberation \
     ca-certificates \
@@ -44,10 +40,6 @@ ENV PORT=3000
 
 # Expose application port
 EXPOSE 3000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD node -e "const port = process.env.PORT || 3000; require('http').get('http://127.0.0.1:' + port + '/', (r) => {if (r.statusCode !== 200 && r.statusCode !== 304) process.exit(1);})"
 
 # Start production server
 CMD ["node", "src/server/app.js"]

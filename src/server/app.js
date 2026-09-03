@@ -97,8 +97,10 @@ async function getEmbeddedBoldFont(pdfDoc) {
 }
 
 // Middleware
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+// Healthcheck endpoint
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
 
 // Route '/' and '/landing' -> Serve Landing Page
 app.get(['/', '/landing'], (req, res) => {
