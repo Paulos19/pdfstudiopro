@@ -1584,10 +1584,10 @@ app.post('/api/chat-pdf/message', async (req, res) => {
     }
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`====================================================`);
-    console.log(`🚀 PDF Studio Pro Server rodando na porta ${PORT}`);
-    console.log(`⚡ WebSocket Server: ATIVO (ws://localhost:${PORT})`);
+    console.log(`🚀 PDF Studio Pro Server rodando na porta ${PORT} (0.0.0.0)`);
+    console.log(`⚡ WebSocket Server: ATIVO (ws://0.0.0.0:${PORT})`);
     console.log(`👉 Acesse no navegador: http://localhost:${PORT}`);
     console.log(`⚡ C++ Native Engine: ${CppBridge.isAvailable() ? 'ONLINE e PRONTO' : 'NAO ENCONTRADO'}`);
     console.log(`====================================================`);
