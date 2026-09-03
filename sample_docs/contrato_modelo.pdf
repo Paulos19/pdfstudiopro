@@ -1,0 +1,115 @@
+%PDF-1.7
+%‚„œ”
+1 0 obj
+<<
+  /Pages 2 0 R
+  /Type /Catalog
+>>
+endobj
+2 0 obj
+<<
+  /Count 1
+  /Kids [ 3 0 R ]
+  /Type /Pages
+>>
+endobj
+3 0 obj
+<<
+  /Contents 4 0 R
+  /MediaBox [ 0 0 595.2800 841.8900 ]
+  /Parent 2 0 R
+  /Resources <<
+  /Font <<
+  /F1 <<
+  /BaseFont /Helvetica
+  /Subtype /Type1
+  /Type /Font
+>>
+  /F2 <<
+  /BaseFont /Helvetica-Bold
+  /Subtype /Type1
+  /Type /Font
+>>
+>>
+>>
+  /Type /Page
+>>
+endobj
+4 0 obj
+<<
+  /Length 1842
+>>
+stream
+q
+0.08 0.12 0.22 rg 0 780 595.28 62 re f
+BT
+/F2 18 Tf 1 1 1 rg 40 802 Td (CONTRATO DE PRESTACAO DE SERVICOS DE SOFTWARE) Tj
+ET
+BT
+/F1 10 Tf 0.8 0.85 0.95 rg 40 788 Td (DOCUMENTO NUMERO: #CTR-2026-8942B | REGISTRO OFICIAL) Tj
+ET
+BT
+/F2 12 Tf 0.1 0.15 0.25 rg 40 740 Td (1. IDENTIFICACAO DAS PARTES CONTRATANTES) Tj
+ET
+BT
+/F1 10 Tf 0.2 0.2 0.2 rg 40 720 Td (CONTRATADA: TechSolutions Global Ltda, CNPJ: 12.345.678/0001-90, Sao Paulo - SP) Tj
+ET
+BT
+/F1 10 Tf 0.2 0.2 0.2 rg 40 705 Td (CONTRATANTE: Alpha Enterprise Corp, CNPJ: 98.765.432/0001-11, Rio de Janeiro - RJ) Tj
+ET
+BT
+/F2 12 Tf 0.1 0.15 0.25 rg 40 665 Td (2. DO OBJETO E ESCOPO DO PROJETO) Tj
+ET
+BT
+/F1 10 Tf 0.2 0.2 0.2 rg 40 645 Td (O presente instrumento tem por objeto o desenvolvimento de um Editor de PDF Profissional,) Tj
+ET
+BT
+/F1 10 Tf 0.2 0.2 0.2 rg 40 630 Td (incluindo motor nativo em C++, API em Node.js e interface web interativa de alta performance.) Tj
+ET
+BT
+/F2 12 Tf 0.1 0.15 0.25 rg 40 590 Td (3. VALORES, PRAZOS E FORMA DE PAGAMENTO) Tj
+ET
+BT
+/F1 10 Tf 0.2 0.2 0.2 rg 40 570 Td (Pela prestacao dos servicos, a CONTRATANTE pagara a quantia total de R$ 45.000,00.) Tj
+ET
+BT
+/F1 10 Tf 0.2 0.2 0.2 rg 40 555 Td (Prazo de entrega previsto: 30 de Setembro de 2026.) Tj
+ET
+0.95 0.97 1.0 rg 0.2 0.4 0.8 RG 1 w 40 460 515 65 re B
+BT
+/F2 10 Tf 0.1 0.3 0.7 rg 55 505 Td (CLAUSULA DE CONFIDENCIALIDADE E PRIVACIDADE (DADO SENSIVEL):) Tj
+ET
+BT
+/F1 9 Tf 0.3 0.3 0.3 rg 55 490 Td (Chave Secreta API de Seguranca: SEC-9942-X883-K991-CONFIDENTIAL) Tj
+ET
+BT
+/F1 9 Tf 0.3 0.3 0.3 rg 55 475 Td (Este documento contem segredos industriais protegidos por legislacao internacional.) Tj
+ET
+0.7 0.7 0.7 RG 1 w
+40 320 220 0 re S
+335 320 220 0 re S
+BT
+/F2 9 Tf 0.3 0.3 0.3 rg 60 305 Td (REPRESENTANTE CONTRATADA) Tj
+ET
+BT
+/F2 9 Tf 0.3 0.3 0.3 rg 360 305 Td (REPRESENTANTE CONTRATANTE) Tj
+ET
+Q
+
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f 
+0000000015 00000 n 
+0000000068 00000 n 
+0000000133 00000 n 
+0000000412 00000 n 
+trailer
+<<
+  /Size 5
+  /Root 1 0 R
+>>
+startxref
+2310
+%%EOF

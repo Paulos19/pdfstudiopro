@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Studio Pro — Motor C++ Nativo &amp; Estúdio de IA</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23FF4D6D'/><text x='50%' y='68%' font-size='55' font-weight='900' font-family='sans-serif' text-anchor='middle' fill='white'>P</text></svg>">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Landing Styles -->
+    <link rel="stylesheet" href="css/landing.css">
+</head>
+<body>
+
+    <!-- Ambient Glowing Orbs Background -->
+    <div class="ambient-glow-wrapper">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+    </div>
+
+    <!-- 1. Fullscreen Three.js Interactive WebGL Stage -->
+    <div id="hero3dCanvasContainer"></div>
+
+    <!-- 2. Navbar (Minimalist, Clean & Perfectly Aligned) -->
+    <nav class="landing-navbar" id="mainLandingNavbar">
+        <a href="/" class="navbar-brand-wrapper" title="Ir para o Dashboard">
+            <!-- Slot reservado para as 3D letras P, D, F atracarem perfeitamente no scroll -->
+            <div class="logo-dock-slot" id="logoAnchorSlot"></div>
+            <div class="brand-label-text">
+                STUDIO <span class="brand-pro-pill">PRO</span>
+            </div>
+        </a>
+
+        <div class="navbar-right-group">
+            <ul class="navbar-links">
+                <li><a href="#sectionRecursos">Recursos</a></li>
+                <li><a href="#sectionDownloads">Downloads</a></li>
+            </ul>
+
+            <div class="navbar-actions">
+                <a href="/app" class="btn-duo btn-duo-green" style="padding: 10px 22px; font-size: 13.5px;" title="Abrir editor imediatamente">
+                    <i class="fa-solid fa-play"></i> <span>Começar Grátis</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 3. Minimalist Hero Overlay (Initial state: zero copy, pure interactive 3D) -->
+    <div class="hero-initial-overlay" id="heroScrollHint">
+        <div class="rope-pull-hint" id="ropePullHintBtn" style="cursor: pointer;" onclick="window.scrollTo({ top: 1400, behavior: 'smooth' });">
+            <i class="fa-solid fa-hand-pointer"></i>
+            <span>Puxe a corda ou clique para iniciar</span>
+        </div>
+    </div>
+
+    <!-- 4. Scrolltelling Trigger Wrapper (Drives GSAP ScrollTrigger timeline) -->
+    <div class="hero-scroll-wrapper" id="heroScrollWrapper"></div>
+
+    <!-- 5. Section 2: Duolingo-Inspired Playful, Vibrant & Colorful Experience -->
+    <section class="landing-section-2" id="landingSection2">
+        <div class="sec2-container">
+
+            <!-- Hero Copy in Duolingo Style -->
+            <div class="sec2-hero-copy">
+                <h2 class="sec2-title">
+                    O jeito mais divertido e rápido<br>
+                    de <span>dominar qualquer PDF.</span>
+                </h2>
+                <p class="sec2-subtitle">
+                    Edite textos in-place, una documentos em segundos, assine com transparência perfeita e turbine seu fluxo de trabalho com Inteligência Artificial nativa.
+                </p>
+
+                <div class="sec2-cta-group">
+                    <a href="/app" class="btn-duo btn-duo-green" style="font-size: 16px; padding: 16px 36px;">
+                        <i class="fa-solid fa-rocket"></i> COMEÇAR AGORA — É GRÁTIS
+                    </a>
+                    <a href="/api/download/zip" class="btn-duo btn-duo-blue" style="font-size: 16px; padding: 16px 32px;" download>
+                        <i class="fa-solid fa-download"></i> BAIXAR SUITE (.ZIP)
+                    </a>
+                </div>
+            </div>
+
+            <!-- Playful Streak & Stats Strip -->
+            <div class="duo-stats-strip" id="sectionRecursos">
+                <div class="duo-stat-pill">
+                    <div class="duo-stat-icon green">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <div class="duo-stat-info">
+                        <h4>0.04s</h4>
+                        <p>Velocidade Nativa C++</p>
+                    </div>
+                </div>
+
+                <div class="duo-stat-pill">
+                    <div class="duo-stat-icon blue">
+                        <i class="fa-solid fa-fire"></i>
+                    </div>
+                    <div class="duo-stat-info">
+                        <h4>10x Mais Rápido</h4>
+                        <p>Streak de Produtividade</p>
+                    </div>
+                </div>
+
+                <div class="duo-stat-pill">
+                    <div class="duo-stat-icon yellow">
+                        <i class="fa-solid fa-gem"></i>
+                    </div>
+                    <div class="duo-stat-info">
+                        <h4>100% Gratuito</h4>
+                        <p>Sem Limites ou Assinatura</p>
+                    </div>
+                </div>
+
+                <div class="duo-stat-pill">
+                    <div class="duo-stat-icon purple">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <div class="duo-stat-info">
+                        <h4>Gemini Flash</h4>
+                        <p>Inteligência Integrada</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alternating Playful Feature Blocks (Duolingo Style) -->
+            <div class="duo-features-container">
+                
+                <!-- Feature 1: Velocidade C++ -->
+                <div class="duo-feature-row" id="sectionMotorCpp">
+                    <div class="duo-feature-text">
+                        <h3>Processamento nativo em C++17 sem travar.</h3>
+                        <p>Esqueça os softwares pesados que congelam ao abrir arquivos grandes. Nosso motor compila direto em baixo nível para renderizar e modificar bytes de PDFs em tempo real.</p>
+                    </div>
+                    <div class="duo-feature-card">
+                        <span class="duo-card-badge green">60 FPS NATIVO</span>
+                        <div class="duo-card-header">
+                            <div class="duo-card-avatar green">
+                                <i class="fa-solid fa-microchip"></i>
+                            </div>
+                            <div class="duo-card-title">
+                                <h4>Motor Cos &amp; Streams</h4>
+                                <span>Zero dependências lentas</span>
+                            </div>
+                        </div>
+                        <div class="duo-progress-bar-wrap">
+                            <div class="duo-progress-bar-fill green"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature 2: Assinaturas Mágicas -->
+                <div class="duo-feature-row reverse">
+                    <div class="duo-feature-text">
+                        <h3>Assinaturas transparentes e carimbos perfeitos.</h3>
+                        <p>Insira sua assinatura manuscrita ou carimbo institucional sem bordas cinzas ou fundos brancos sujos. Posicione, redimensione e aplique em um clique.</p>
+                    </div>
+                    <div class="duo-feature-card">
+                        <span class="duo-card-badge blue">ALPHA 100% LIMPO</span>
+                        <div class="duo-card-header">
+                            <div class="duo-card-avatar blue">
+                                <i class="fa-solid fa-pen-nib"></i>
+                            </div>
+                            <div class="duo-card-title">
+                                <h4>Firma Digitalizada</h4>
+                                <span>Caneta vetorial suave</span>
+                            </div>
+                        </div>
+                        <div class="duo-progress-bar-wrap">
+                            <div class="duo-progress-bar-fill blue"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature 3: IA Gemini Copilot -->
+                <div class="duo-feature-row">
+                    <div class="duo-feature-text">
+                        <h3>Copilot inteligente com Gemini Flash.</h3>
+                        <p>Audite cláusulas em contratos, gere resumos executivos automáticos e execute o scanner de conformidade LGPD para mascarar CPFs e dados sensíveis.</p>
+                    </div>
+                    <div class="duo-feature-card">
+                        <span class="duo-card-badge yellow">IA FLASH 2.0</span>
+                        <div class="duo-card-header">
+                            <div class="duo-card-avatar purple">
+                                <i class="fa-solid fa-sparkles"></i>
+                            </div>
+                            <div class="duo-card-title">
+                                <h4>Auditor de Documentos</h4>
+                                <span>Resumo &amp; Scanner LGPD</span>
+                            </div>
+                        </div>
+                        <div class="duo-progress-bar-wrap">
+                            <div class="duo-progress-bar-fill yellow"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════════
+                 SECTION 3: COMO USAR EM 3 PASSOS MÁGICOS
+                 ═══════════════════════════════════════════════════════════════ -->
+            <!-- ═══════════════════════════════════════════════════════════════
+                 SECTION 3: COMO USAR EM 3 PASSOS MÁGICOS
+                 ═══════════════════════════════════════════════════════════════ -->
+            <div class="duo-howto-section" id="sectionHowTo">
+                <div class="duo-section-header">
+                    <h3>Domine qualquer documento em 3 passos fáceis.</h3>
+                    <p>Do upload à exportação final em segundos, tudo processado no seu computador.</p>
+                </div>
+
+                <div class="howto-steps-grid">
+                    <!-- Passo 1 -->
+                    <div class="howto-step-card">
+                        <div class="howto-step-header">
+                            <div class="howto-step-num green">01</div>
+                            <div class="howto-step-icon"><i class="fa-solid fa-file-arrow-up"></i></div>
+                        </div>
+                        <h4>1. Solte seu PDF ou Imagens</h4>
+                        <p>Arraste múltiplos arquivos diretamente. O motor C++ analisa a árvore Cos e renderiza as páginas em 0.04s.</p>
+                        <div class="howto-interactive-preview">
+                            <div class="dropzone-pill-row">
+                                <span class="dropzone-file-pill"><i class="fa-solid fa-file-pdf" style="color: #FF4D6D;"></i> contrato.pdf</span>
+                                <span class="dropzone-file-pill" style="animation-delay: 0.5s;"><i class="fa-solid fa-image" style="color: #1CB0F6;"></i> foto.png</span>
+                            </div>
+                            <span style="font-size: 11.5px; font-weight: 700; color: #58CC02;">
+                                <i class="fa-solid fa-circle-check"></i> 100% Processado Localmente
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Passo 2 -->
+                    <div class="howto-step-card">
+                        <div class="howto-step-header">
+                            <div class="howto-step-num blue">02</div>
+                            <div class="howto-step-icon"><i class="fa-solid fa-wand-sparkles"></i></div>
+                        </div>
+                        <h4>2. Edite Textos e Assine com Alpha</h4>
+                        <p>Altere textos in-place, insira carimbos transparentes com caneta vetorial e rode o auditor IA para resumir cláusulas.</p>
+                        <div class="howto-interactive-preview">
+                            <div class="signature-drag-demo">
+                                <span class="sig-handwritten">João Silva</span>
+                                <span class="sig-status-badge"><i class="fa-solid fa-check"></i> Alpha 100% Limpo</span>
+                            </div>
+                            <span style="font-size: 11.5px; font-weight: 700; color: #1CB0F6;">
+                                <i class="fa-solid fa-arrows-up-down-left-right"></i> Arraste e Posicione Livremente
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Passo 3 -->
+                    <div class="howto-step-card">
+                        <div class="howto-step-header">
+                            <div class="howto-step-num yellow">03</div>
+                            <div class="howto-step-icon"><i class="fa-solid fa-file-circle-check"></i></div>
+                        </div>
+                        <h4>3. Exporte em Alta Resolução</h4>
+                        <p>Gere um PDF final limpo, otimizado e sem metadados desnecessários. Salve na sua máquina ou compartilhe com 1 clique.</p>
+                        <div class="howto-interactive-preview">
+                            <div class="export-progress-demo">
+                                <div class="export-label-row">
+                                    <span>Compilando C++17...</span>
+                                    <span>0.04s</span>
+                                </div>
+                                <div class="export-bar-track">
+                                    <div class="export-bar-fill"></div>
+                                </div>
+                            </div>
+                            <span style="font-size: 11.5px; font-weight: 700; color: #E5A500;">
+                                <i class="fa-solid fa-bolt"></i> Arquivo 75% Mais Leve
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════════
+                 SECTION 4: SUPERPODERES DESTRINCHADOS (DEEP DIVES)
+                 ═══════════════════════════════════════════════════════════════ -->
+            <div class="duo-deepdives-section" id="sectionDeepDives">
+                <div class="duo-section-header">
+                    <h3>Tecnologia de ponta pensada para o seu fluxo.</h3>
+                    <p>Descubra como combinamos baixo nível com Inteligência Artificial de última geração.</p>
+                </div>
+
+                <div class="deepdives-grid">
+                    <!-- Deep Dive 1 -->
+                    <div class="deepdive-card">
+                        <div class="deepdive-top">
+                            <div class="deepdive-icon blue">
+                                <i class="fa-solid fa-pen-nib"></i>
+                            </div>
+                            <div class="deepdive-content">
+                                <h4>Assinaturas com Fundo 100% Transparente</h4>
+                                <p>Chega de assinar em papel e tirar foto com sombra cinza. Nossa ferramenta extrai apenas o traço com caneta vetorial pura e canal alfa real.</p>
+                            </div>
+                        </div>
+                        <div class="deepdive-footer">
+                            <span class="deepdive-pill blue"><i class="fa-solid fa-sparkles"></i> Sem Fundo Branco Sujo</span>
+                            <span style="font-size: 12px; font-weight: 800; color: #1CB0F6;">Vetor Suave</span>
+                        </div>
+                    </div>
+
+                    <!-- Deep Dive 2 -->
+                    <div class="deepdive-card">
+                        <div class="deepdive-top">
+                            <div class="deepdive-icon green">
+                                <i class="fa-solid fa-bolt"></i>
+                            </div>
+                            <div class="deepdive-content">
+                                <h4>Sem Travamentos em Arquivos Gigantes</h4>
+                                <p>Arquitetura em C++17 sem garbage collection lenta. Lida com catálogos pesados, plantas e PDFs de 500 páginas em milissegundos.</p>
+                            </div>
+                        </div>
+                        <div class="deepdive-footer">
+                            <span class="deepdive-pill green"><i class="fa-solid fa-gauge-high"></i> 0.04s de Resposta</span>
+                            <span style="font-size: 12px; font-weight: 800; color: #58CC02;">Zero Lag</span>
+                        </div>
+                    </div>
+
+                    <!-- Deep Dive 3 -->
+                    <div class="deepdive-card">
+                        <div class="deepdive-top">
+                            <div class="deepdive-icon purple">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <div class="deepdive-content">
+                                <h4>Auditoria de Cláusulas & Ocultação LGPD</h4>
+                                <p>O Gemini 1.5 Flash analisa contratos complexos, aponta riscos e sugere tarjas pretas permanentes sobre CPFs, e-mails e dados sigilosos.</p>
+                            </div>
+                        </div>
+                        <div class="deepdive-footer">
+                            <span class="deepdive-pill purple"><i class="fa-solid fa-user-shield"></i> 100% Conforme LGPD</span>
+                            <span style="font-size: 12px; font-weight: 800; color: #854CE6;">IA Nativa</span>
+                        </div>
+                    </div>
+
+                    <!-- Deep Dive 4 -->
+                    <div class="deepdive-card">
+                        <div class="deepdive-top">
+                            <div class="deepdive-icon yellow">
+                                <i class="fa-solid fa-images"></i>
+                            </div>
+                            <div class="deepdive-content">
+                                <h4>Monte Álbuns e Documentos de Fotos</h4>
+                                <p>Selecione quantas fotos quiser, reordene visualmente e crie relatórios fotográficos ou apostilas em PDF com compressão inteligente.</p>
+                            </div>
+                        </div>
+                        <div class="deepdive-footer">
+                            <span class="deepdive-pill yellow"><i class="fa-solid fa-layer-group"></i> Alta Nitidez</span>
+                            <span style="font-size: 12px; font-weight: 800; color: #E5A500;">Reordenação Rápida</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════════
+                 SECTION 5: TABELA COMPARATIVA LÚDICA
+                 ═══════════════════════════════════════════════════════════════ -->
+            <div class="duo-comparison-section" id="sectionComparison">
+                <div class="duo-section-header">
+                    <h3>Compare com as opções tradicionais.</h3>
+                    <p>Veja por que milhares de profissionais estão migrando para o PDF Studio Pro.</p>
+                </div>
+
+                <div class="comparison-table-wrap">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Recurso / Diferencial</th>
+                                <th class="col-highlight">
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <i class="fa-solid fa-crown" style="color: #FFC800;"></i> PDF STUDIO PRO
+                                    </div>
+                                </th>
+                                <th style="text-align: center;">Editores Web Clássicos</th>
+                                <th style="text-align: center;">Adobe Acrobat Pro</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="feature-title-cell"><i class="fa-solid fa-gauge-high"></i> Velocidade de Abertura</td>
+                                <td class="col-highlight"><span class="check-green"><i class="fa-solid fa-circle-check"></i> 0.04s (Nativo C++)</span></td>
+                                <td style="text-align: center; color: #64748B;">8s a 15s (Upload Lento)</td>
+                                <td style="text-align: center; color: #64748B;">4s a 8s (Pesado)</td>
+                            </tr>
+                            <tr>
+                                <td class="feature-title-cell"><i class="fa-solid fa-lock"></i> Privacidade dos Documentos</td>
+                                <td class="col-highlight"><span class="check-green"><i class="fa-solid fa-circle-check"></i> 100% no seu Computador</span></td>
+                                <td style="text-align: center; color: #64748B;">Enviado para Nuvem</td>
+                                <td style="text-align: center; color: #64748B;">Dependente de Nuvem</td>
+                            </tr>
+                            <tr>
+                                <td class="feature-title-cell"><i class="fa-solid fa-pen-nib"></i> Assinatura com Fundo Transparente</td>
+                                <td class="col-highlight"><span class="check-green"><i class="fa-solid fa-circle-check"></i> Sim, Automático</span></td>
+                                <td style="text-align: center; color: #64748B;"><span class="cross-gray"><i class="fa-solid fa-circle-xmark"></i> Fundo branco/sujo</span></td>
+                                <td style="text-align: center; color: #64748B;">Manual Complexo</td>
+                            </tr>
+                            <tr>
+                                <td class="feature-title-cell"><i class="fa-solid fa-brain"></i> Auditoria de Contratos com IA</td>
+                                <td class="col-highlight"><span class="check-green"><i class="fa-solid fa-circle-check"></i> Integrada & Gratuita</span></td>
+                                <td style="text-align: center; color: #64748B;"><span class="cross-gray"><i class="fa-solid fa-circle-xmark"></i> Não possui</span></td>
+                                <td style="text-align: center; color: #64748B;">Pago à parte ($$$)</td>
+                            </tr>
+                            <tr>
+                                <td class="feature-title-cell"><i class="fa-solid fa-cube"></i> Versão Portátil (Sem Instalar)</td>
+                                <td class="col-highlight"><span class="check-green"><i class="fa-solid fa-circle-check"></i> Sim (.exe Plug & Play)</span></td>
+                                <td style="text-align: center; color: #64748B;"><span class="cross-gray"><i class="fa-solid fa-circle-xmark"></i> Apenas Navegador</span></td>
+                                <td style="text-align: center; color: #64748B;"><span class="cross-gray"><i class="fa-solid fa-circle-xmark"></i> Requer Instalação</span></td>
+                            </tr>
+                            <tr>
+                                <td class="feature-title-cell"><i class="fa-solid fa-tag"></i> Custo Mensal / Licença</td>
+                                <td class="col-highlight"><span class="check-green"><i class="fa-solid fa-circle-check"></i> R$ 0 / Gratuito</span></td>
+                                <td style="text-align: center; color: #64748B;">R$ 49/mês</td>
+                                <td style="text-align: center; color: #64748B;">R$ 124/mês</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════════
+                 SECTION: DOWNLOAD HUB
+                 ═══════════════════════════════════════════════════════════════ -->
+            <div class="duo-download-section" id="sectionDownloads">
+                <div class="duo-section-header">
+                    <h3>Baixe a Suite ou Use Online Agora.</h3>
+                    <p>Totalmente livre, sem necessidade de cadastro ou cartão de crédito.</p>
+                </div>
+
+                <div class="download-cards-grid">
+                    <!-- 1. Pacote ZIP Completo -->
+                    <a href="/api/download/zip" class="dl-card-duo highlight" download>
+                        <div class="dl-badge-duo">RECOMENDADO</div>
+                        <div>
+                            <div class="dl-icon-duo green">
+                                <i class="fa-solid fa-file-zipper"></i>
+                            </div>
+                            <div class="dl-info-duo">
+                                <h4>Pacote Completo (.ZIP)</h4>
+                                <span>Tudo em um único arquivo (230 MB)</span>
+                            </div>
+                            <ul class="dl-features-duo">
+                                <li><i class="fa-solid fa-check"></i> Inclui Instalador Setup Oficial</li>
+                                <li><i class="fa-solid fa-check"></i> Inclui Versão Portátil Plug &amp; Play</li>
+                                <li><i class="fa-solid fa-check"></i> Guia de Início Rápido</li>
+                            </ul>
+                        </div>
+                        <button class="btn-duo btn-duo-green" style="width: 100%;">
+                            <i class="fa-solid fa-download"></i> Baixar Suite (.ZIP)
+                        </button>
+                    </a>
+
+                    <!-- 2. Instalador Oficial Setup -->
+                    <a href="/api/download/setup" class="dl-card-duo" download>
+                        <div>
+                            <div class="dl-icon-duo blue">
+                                <i class="fa-brands fa-windows"></i>
+                            </div>
+                            <div class="dl-info-duo">
+                                <h4>Instalador Oficial Setup</h4>
+                                <span>Instalação guiada no Windows (115 MB)</span>
+                            </div>
+                            <ul class="dl-features-duo">
+                                <li><i class="fa-solid fa-check"></i> Cria atalhos na Área de Trabalho</li>
+                                <li><i class="fa-solid fa-check"></i> Atalho no Menu Iniciar</li>
+                                <li><i class="fa-solid fa-check"></i> Atualizações automáticas</li>
+                            </ul>
+                        </div>
+                        <button class="btn-duo btn-duo-blue" style="width: 100%;">
+                            <i class="fa-solid fa-download"></i> Baixar Instalador (.exe)
+                        </button>
+                    </a>
+
+                    <!-- 3. Versão Portátil -->
+                    <a href="/api/download/portable" class="dl-card-duo" download>
+                        <div>
+                            <div class="dl-icon-duo purple">
+                                <i class="fa-solid fa-cube"></i>
+                            </div>
+                            <div class="dl-info-duo">
+                                <h4>Versão Portátil</h4>
+                                <span>Execução imediata sem instalar (115 MB)</span>
+                            </div>
+                            <ul class="dl-features-duo">
+                                <li><i class="fa-solid fa-check"></i> Execute direto do pendrive</li>
+                                <li><i class="fa-solid fa-check"></i> Zero vestígios no Registro</li>
+                                <li><i class="fa-solid fa-check"></i> Não requer admin</li>
+                            </ul>
+                        </div>
+                        <button class="btn-duo btn-duo-yellow" style="width: 100%;">
+                            <i class="fa-solid fa-download"></i> Baixar Portátil (.exe)
+                        </button>
+                    </a>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════════
+                 SECTION 6: CTA BANNER FINAL
+                 ═══════════════════════════════════════════════════════════════ -->
+            <div class="duo-cta-banner" id="sectionCTA">
+                <h2>Pronto para mudar a forma como você trabalha com PDFs?</h2>
+                <p>Junte-se à nova era de documentos: sem assinaturas caras, sem uploads lentos e com o poder do C++17 e IA na ponta dos seus dedos.</p>
+                <div class="cta-actions-row">
+                    <a href="/app" class="btn-duo btn-duo-green" style="font-size: 16px; padding: 16px 36px;">
+                        <i class="fa-solid fa-rocket"></i> ABRIR ESTÚDIO WEB AGORA
+                    </a>
+                    <a href="/api/download/zip" class="btn-duo btn-duo-blue" style="font-size: 16px; padding: 16px 36px;" download>
+                        <i class="fa-solid fa-download"></i> BAIXAR SUITE COMPLETA (.ZIP)
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         SECTION 7: RODAPÉ COMPLETO & ELEGANTE
+         ═══════════════════════════════════════════════════════════════════ -->
+    <footer class="landing-footer">
+        <div class="footer-container">
+            <div class="footer-top-grid">
+                <!-- Coluna 1: Brand & Status -->
+                <div class="footer-brand-col">
+                    <a href="#" class="footer-brand-logo">
+                        <span>PDF STUDIO</span>
+                        <span class="brand-pro-pill">PRO</span>
+                    </a>
+                    <p class="footer-brand-desc">
+                        A suite definitiva para criação, edição in-place, assinaturas e auditoria de documentos com motor nativo em C++17 e IA Gemini Flash integrada.
+                    </p>
+                    <div class="footer-server-status">
+                        <i class="fa-solid fa-circle" style="font-size: 8px;"></i>
+                        <span>Motor Local C++17 Ativo</span>
+                    </div>
+                </div>
+
+                <!-- Coluna 2: Ferramentas -->
+                <div class="footer-col">
+                    <h5>Ferramentas</h5>
+                    <ul class="footer-links-list">
+                        <li><a href="/app"><i class="fa-solid fa-pen-to-square"></i> Editor de Textos</a></li>
+                        <li><a href="/app"><i class="fa-solid fa-signature"></i> Assinador Alpha</a></li>
+                        <li><a href="/app"><i class="fa-solid fa-object-group"></i> Organizador &amp; Fusão</a></li>
+                        <li><a href="/app"><i class="fa-solid fa-images"></i> Imagens para PDF</a></li>
+                        <li><a href="/app"><i class="fa-solid fa-shield-halved"></i> Scanner LGPD</a></li>
+                    </ul>
+                </div>
+
+                <!-- Coluna 3: Downloads -->
+                <div class="footer-col">
+                    <h5>Downloads</h5>
+                    <ul class="footer-links-list">
+                        <li><a href="/api/download/zip" download><i class="fa-solid fa-file-zipper"></i> Pacote ZIP Completo</a></li>
+                        <li><a href="/api/download/setup" download><i class="fa-brands fa-windows"></i> Instalador Setup (.exe)</a></li>
+                        <li><a href="/api/download/portable" download><i class="fa-solid fa-cube"></i> Versão Portátil (.exe)</a></li>
+                        <li><a href="#sectionDownloads"><i class="fa-solid fa-book-bookmark"></i> Guia de Início Rápido</a></li>
+                    </ul>
+                </div>
+
+                <!-- Coluna 4: Tecnologia & Segurança -->
+                <div class="footer-col">
+                    <h5>Segurança &amp; IA</h5>
+                    <ul class="footer-links-list">
+                        <li><a href="#"><i class="fa-solid fa-microchip"></i> Motor C++17 Nativo</a></li>
+                        <li><a href="#"><i class="fa-solid fa-lock"></i> Processamento 100% Local</a></li>
+                        <li><a href="#"><i class="fa-solid fa-brain"></i> Gemini 1.5 Flash IA</a></li>
+                        <li><a href="#"><i class="fa-solid fa-user-shield"></i> Conformidade LGPD & GDPR</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom-bar">
+                <div>
+                    © 2026 <strong>PDF Studio Pro</strong>. Todos os direitos reservados.
+                </div>
+                <div class="footer-bottom-links">
+                    <a href="#">Privacidade</a>
+                    <span>•</span>
+                    <a href="#">Termos de Uso</a>
+                    <span>•</span>
+                    <a href="#">Documentação C++17</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Three.js (Local High-Performance Engine) -->
+    <script src="js/three.min.js"></script>
+    <!-- GSAP & ScrollTrigger CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    
+    <!-- Hero Cinematic 3D Engine -->
+    <script src="js/hero_cinematic_v5.js?t=1688432000"></script>
+</body>
+</html>

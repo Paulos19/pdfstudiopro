@@ -1,0 +1,22 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment & Secrets
+.env
+.env.local
+
+# Temporary files & logs
+temp/*
+!temp/.gitkeep
+*.log
+
+# Build & Release outputs
+dist/
+build/
+
+# Operating System
+.DS_Store
+Thumbs.db

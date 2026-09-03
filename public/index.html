@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Studio Pro | Motor C++ & Estúdio de IA</title>
+    <!-- Modern Typography & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Dancing+Script:wght@700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- PDF.js CDN for Client Canvas Rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <!-- Marked.js for High-Quality Markdown Rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/studio.css">
+    <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+    <!-- Real-Time AI & PDF Generation Progress Banner (WebSocket Streamed) -->
+    <div class="ai-live-progress-bar" id="aiLiveProgressBar" style="display: none;">
+        <div class="progress-bar-header">
+            <div class="progress-bar-title">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span id="aiProgressTitle">Processando com Inteligência Artificial...</span>
+            </div>
+            <span class="progress-percent" id="aiProgressPercent">0%</span>
+        </div>
+        <div class="progress-track">
+            <div class="progress-fill" id="aiProgressFill" style="width: 0%;"></div>
+        </div>
+        <div class="progress-status-msg" id="aiProgressStatusMsg">Iniciando pipeline...</div>
+    </div>
+
+    <div class="app-container">
+        <!-- Mobile Header Bar -->
+        <div class="mobile-app-header" id="mobileAppHeader">
+            <button class="btn-mobile-menu" id="btnMobileMenuToggle" aria-label="Abrir Menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="mobile-brand-title">
+                <i class="fa-solid fa-file-pdf" style="color: var(--accent-red);"></i>
+                <span>PDF Studio <span class="badge-pro">PRO</span></span>
+            </div>
+            <div class="mobile-header-actions">
+                <button class="btn-mobile-theme" id="btnMobileThemeToggle" title="Alternar Tema">
+                    <i class="fa-solid fa-sun"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Sidebar Backdrop Overlay -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+        <!-- Fixed & Collapsible Sidebar -->
+        <aside class="app-sidebar" id="appSidebar">
+            <div class="sidebar-top">
+                <!-- Brand Header -->
+                <div class="sidebar-brand">
+                    <div class="brand-wrapper" title="PDF Studio Pro">
+                        <div class="brand-icon"><i class="fa-solid fa-file-pdf"></i></div>
+                        <div class="brand-title-box">
+                            <span class="brand-main-title">PDF Studio <span class="badge-pro">PRO</span></span>
+                            <span class="brand-sub-title">C++ Engine &amp; IA</span>
+                        </div>
+                    </div>
+                    <button class="btn-sidebar-toggle" id="btnToggleSidebar" title="Recolher / Expandir Menu">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                </div>
+
+                <!-- Navigation Routes -->
+                <nav class="sidebar-nav">
+                    <!-- SECTION 1: CORE ENGINE -->
+                    <div class="nav-section-title">
+                        <span>Motor Nativo</span>
+                    </div>
+
+                    <a class="nav-item" data-route="studio" title="Editor Nativo de PDF (C++ Core)">
+                        <div class="nav-item-icon-wrapper">
+                            <i class="fa-solid fa-file-pen icon-editor"></i>
+                        </div>
+                        <span class="nav-label">Editor de PDF</span>
+                        <span class="nav-badge engine-tag">C++ Core</span>
+                        <div class="nav-collapsed-tooltip">
+                            <strong>Editor de PDF</strong>
+                            <span>Motor C++ &amp; Anotações</span>
+                        </div>
+                    </a>
+
+                    <a class="nav-item" data-route="images-to-pdf" title="Juntar Imagens e Transformar em PDF">
+                        <div class="nav-item-icon-wrapper">
+                            <i class="fa-solid fa-images" style="color: #06B6D4;"></i>
+                        </div>
+                        <span class="nav-label">Imagens para PDF</span>
+                        <span class="nav-badge" style="background: rgba(6, 182, 212, 0.15); color: #06B6D4;">Novo</span>
+                        <div class="nav-collapsed-tooltip">
+                            <strong>Imagens para PDF</strong>
+                            <span>Mesclar fotos e scans</span>
+                        </div>
+                    </a>
+
+                    <div class="nav-divider"></div>
+
+                    <!-- SECTION 2: AI SUITE -->
+                    <div class="nav-section-title">
+                        <span>Estúdio de IA</span>
+                    </div>
+
+                    <a class="nav-item active" data-route="ats-resume" title="Criador &amp; Otimizador de Currículos ATS">
+                        <div class="nav-item-icon-wrapper">
+                            <i class="fa-solid fa-bullseye icon-ats"></i>
+                        </div>
+                        <span class="nav-label">Currículo ATS &amp; Vagas</span>
+                        <span class="nav-badge active-pro">IA Ativa</span>
+                        <div class="nav-collapsed-tooltip">
+                            <strong>Currículo ATS</strong>
+                            <span>Matching Semântico</span>
+                        </div>
+                    </a>
+
+                    <a class="nav-item" data-route="prompt-doc" title="Gerador de Documentos e Contratos via Prompt Livre">
+                        <div class="nav-item-icon-wrapper">
+                            <i class="fa-solid fa-wand-magic-sparkles icon-prompt"></i>
+                        </div>
+                        <span class="nav-label">Gerador por Prompt</span>
+                        <span class="nav-badge active-pro">IA Ativa</span>
+                        <div class="nav-collapsed-tooltip">
+                            <strong>Gerador por Prompt</strong>
+                            <span>Contratos &amp; Minutas</span>
+                        </div>
+                    </a>
+
+                    <a class="nav-item" data-route="lgpd-redact" title="Scanner Automático de LGPD / PII">
+                        <div class="nav-item-icon-wrapper">
+                            <i class="fa-solid fa-shield-halved icon-lgpd"></i>
+                        </div>
+                        <span class="nav-label">Scanner LGPD</span>
+                        <span class="nav-badge active-pro">IA Ativa</span>
+                        <div class="nav-collapsed-tooltip">
+                            <strong>Scanner LGPD</strong>
+                            <span>Auditoria &amp; Redação</span>
+                        </div>
+                    </a>
+
+                    <a class="nav-item" data-route="contract-audit" title="Auditor de Riscos e Cláusulas Contratuais">
+                        <div class="nav-item-icon-wrapper">
+                            <i class="fa-solid fa-scale-balanced icon-audit"></i>
+                        </div>
+                        <span class="nav-label">Auditor de Contratos</span>
+                        <span class="nav-badge active-pro">IA Ativa</span>
+                        <div class="nav-collapsed-tooltip">
+                            <strong>Auditor de Contratos</strong>
+                            <span>Scorecard de Riscos</span>
+                        </div>
+                    </a>
+
+                    <a class="nav-item" data-route="chat-pdf" title="Chat Copilot com o Documento">
+                        <div class="nav-item-icon-wrapper">
+                            <i class="fa-solid fa-comments icon-chat"></i>
+                        </div>
+                        <span class="nav-label">Chat com PDF</span>
+                        <span class="nav-badge active-pro">IA Ativa</span>
+                        <div class="nav-collapsed-tooltip">
+                            <strong>Chat com PDF</strong>
+                            <span>Copilot Conectado</span>
+                        </div>
+                    </a>
+                </nav>
+            </div>
+
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer">
+                <div class="system-status-indicator" id="engineStatusBadge" title="Status do motor nativo C++">
+                    <span class="status-dot"></span>
+                    <span class="status-label">Motor C++: Ativo</span>
+                    <div class="nav-collapsed-tooltip">
+                        <strong>Motor C++ Local</strong>
+                        <span>Status: Online &amp; Pronto</span>
+                    </div>
+                </div>
+                <button class="btn btn-secondary btn-sm btn-theme-toggle" id="btnThemeToggle" title="Alternar Tema Claro / Escuro">
+                    <i class="fa-solid fa-sun"></i> 
+                    <span class="theme-label">Alternar Tema</span>
+                    <div class="nav-collapsed-tooltip">
+                        <strong>Tema</strong>
+                        <span>Alternar Claro / Escuro</span>
+                    </div>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <main class="app-main">
+            <!-- ========================================== -->
+            <!-- ROUTE 1: ATS RESUME STUDIO (ACTIVE)       -->
+            <!-- ========================================== -->
+            <section class="route-view active" id="viewAtsResume">
+                <!-- Standardized View Header -->
+                <header class="view-header">
+                    <div class="view-header-left">
+                        <div class="view-header-icon header-icon-ats"><i class="fa-solid fa-bullseye"></i></div>
+                        <div class="view-header-titles">
+                            <div class="view-title">Currículo ATS &amp; Otimizador de Vagas</div>
+                            <div class="view-subtitle">Análise semântica e pontuação para triagem em robôs de RH</div>
+                        </div>
+                    </div>
+                    <div class="view-header-actions">
+                        <div class="ws-live-badge online" id="wsLiveBadge" title="Status da conexão em tempo real via WebSocket">
+                            <span class="status-dot"></span>
+                            <span>WebSocket: Ao Vivo</span>
+                        </div>
+                        <input type="file" id="atsFileInput" accept="application/pdf" style="display: none;">
+                        <button class="btn btn-secondary btn-sm" id="btnAtsImportPdf" title="Importar dados de um PDF existente">
+                            <i class="fa-solid fa-file-import"></i> Importar PDF
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btnAtsGeneratePdf" title="Atualizar e compilar PDF ATS">
+                            <i class="fa-solid fa-arrows-rotate"></i> Atualizar
+                        </button>
+                        <button class="btn btn-primary btn-sm" id="btnAtsDownloadPdf" title="Baixar currículo pronto para envio">
+                            <i class="fa-solid fa-download"></i> Baixar PDF
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Split Workspace (Form + Job vs Score + Preview) -->
+                <div class="ats-container">
+                    <!-- Left Panel -->
+                    <div class="ats-left-panel">
+                        <div class="ats-panel-header">
+                            <div class="ats-nav-tabs">
+                                <button class="ats-nav-tab active" data-tab="job">
+                                    <i class="fa-solid fa-briefcase"></i> Vaga Alvo &amp; IA
+                                </button>
+                                <button class="ats-nav-tab" data-tab="personal">
+                                    <i class="fa-solid fa-user"></i> Dados Pessoais
+                                </button>
+                                <button class="ats-nav-tab" data-tab="experience">
+                                    <i class="fa-solid fa-list-check"></i> Experiências
+                                </button>
+                                <button class="ats-nav-tab" data-tab="skills">
+                                    <i class="fa-solid fa-microchip"></i> Competências
+                                </button>
+                                <button class="ats-nav-tab" data-tab="education">
+                                    <i class="fa-solid fa-graduation-cap"></i> Formação
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="ats-panel-body">
+                            <!-- Tab: Job Description & Optimization -->
+                            <div class="ats-tab-content active" id="atsTabJob">
+                                <div class="job-desc-box">
+                                    <div class="job-desc-header">
+                                        <div class="job-desc-title">
+                                            <i class="fa-solid fa-crosshairs"></i> Vaga Alvo &amp; Requisitos
+                                        </div>
+                                        <small style="color: var(--text-muted);">Cole a descrição da vaga</small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Cargo Alvo Desejado</label>
+                                        <input type="text" class="form-input" id="atsTargetRole" placeholder="Ex: Engenheiro de Software Sênior / Desenvolvedor Full Stack">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Descrição da Vaga de Emprego (Job Description)</label>
+                                        <textarea class="form-textarea" id="atsJobDescription" rows="8" placeholder="Cole aqui o texto da vaga (requisitos, qualificações, tecnologias mandatórias e diferenciais)..."></textarea>
+                                    </div>
+                                    <button class="btn btn-ai" id="btnAtsOptimize" style="width: 100%; height: 38px; font-size: 13px;">
+                                        <i class="fa-solid fa-wand-magic-sparkles"></i> Otimizar Currículo para ATS com Gemini
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Tab: Personal Details -->
+                            <div class="ats-tab-content" id="atsTabPersonal">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Nome Completo <span class="req">*</span></label>
+                                        <input type="text" class="form-input" id="atsInputName" placeholder="Ex: Paulo Henrique Silva">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Título Profissional <span class="req">*</span></label>
+                                        <input type="text" class="form-input" id="atsInputTitle" placeholder="Ex: Engenheiro de Software Full Stack">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Localização (Cidade, Estado, País)</label>
+                                        <input type="text" class="form-input" id="atsInputLocation" placeholder="Ex: São Paulo, SP, Brasil">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">E-mail de Contato <span class="req">*</span></label>
+                                        <input type="email" class="form-input" id="atsInputEmail" placeholder="email@exemplo.com">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Telefone / WhatsApp</label>
+                                        <input type="text" class="form-input" id="atsInputPhone" placeholder="+55 (11) 98765-4321">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">LinkedIn</label>
+                                        <input type="text" class="form-input" id="atsInputLinkedin" placeholder="linkedin.com/in/seu-perfil">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">GitHub</label>
+                                        <input type="text" class="form-input" id="atsInputGithub" placeholder="github.com/seu-usuario">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Portfólio / Site</label>
+                                        <input type="text" class="form-input" id="atsInputPortfolio" placeholder="seusite.com">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Resumo Profissional (Perfil de Alto Impacto)</label>
+                                    <textarea class="form-textarea" id="atsTextareaSummary" rows="4" placeholder="Descreva sua experiência, principais entregas e proposta de valor..."></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Tab: Experience -->
+                            <div class="ats-tab-content" id="atsTabExperience">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);">Histórico Profissional</span>
+                                    <button type="button" class="btn btn-secondary btn-sm" id="btnAddExperience">
+                                        <i class="fa-solid fa-plus"></i> Adicionar Experiência
+                                    </button>
+                                </div>
+                                <div id="experienceListContainer"></div>
+                            </div>
+
+                            <!-- Tab: Skills -->
+                            <div class="ats-tab-content" id="atsTabSkills">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);">Categorias de Habilidades</span>
+                                    <button type="button" class="btn btn-secondary btn-sm" id="btnAddSkill">
+                                        <i class="fa-solid fa-plus"></i> Adicionar Categoria
+                                    </button>
+                                </div>
+                                <div id="skillsListContainer"></div>
+                            </div>
+
+                            <!-- Tab: Education -->
+                            <div class="ats-tab-content" id="atsTabEducation">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);">Formação Acadêmica</span>
+                                </div>
+                                <div id="educationListContainer"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel: ATS Score & Live Preview -->
+                    <div class="ats-right-panel">
+                        <!-- Score Dashboard -->
+                        <div class="ats-score-dashboard">
+                            <div class="score-main-row">
+                                <div class="score-badge-box">
+                                    <div class="score-circle" id="atsScoreCircle">92%</div>
+                                    <div class="score-details">
+                                        <span class="score-title">Compatibilidade ATS</span>
+                                        <span class="score-status-tag" id="atsScoreStatusTag">Excelente Compatibilidade com Bots ATS</span>
+                                    </div>
+                                </div>
+                                <div style="font-size: 11px; color: var(--text-muted); max-width: 320px; text-align: right;" id="atsScoreSummaryText">
+                                    Pronto para passar nos filtros de triagem automática e destacar suas principais conquistas.
+                                </div>
+                            </div>
+
+                            <!-- Keywords matching -->
+                            <div class="ats-keyword-grid">
+                                <div>
+                                    <div class="keyword-category-title" style="color: #34D399; margin-bottom: 4px;">
+                                        <i class="fa-solid fa-circle-check"></i> Palavras-Chave Encontradas na Vaga
+                                    </div>
+                                    <div class="keyword-chips" id="atsMatchedKeywords">
+                                        <span class="chip chip-match"><i class="fa-solid fa-check"></i> TypeScript</span>
+                                        <span class="chip chip-match"><i class="fa-solid fa-check"></i> React 19</span>
+                                        <span class="chip chip-match"><i class="fa-solid fa-check"></i> Node.js</span>
+                                        <span class="chip chip-match"><i class="fa-solid fa-check"></i> AWS</span>
+                                        <span class="chip chip-match"><i class="fa-solid fa-check"></i> CI/CD</span>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 4px;">
+                                    <div class="keyword-category-title" style="color: #FBBF24; margin-bottom: 4px;">
+                                        <i class="fa-solid fa-circle-exclamation"></i> Palavras-Chave Sugeridas / Faltantes
+                                    </div>
+                                    <div class="keyword-chips" id="atsMissingKeywords">
+                                        <span class="chip chip-missing"><i class="fa-solid fa-circle-exclamation"></i> Microserviços</span>
+                                        <span class="chip chip-missing"><i class="fa-solid fa-circle-exclamation"></i> Next.js App Router</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Suggestions List -->
+                            <ul id="atsSuggestionsList" style="list-style: none; padding-top: 4px;">
+                                <li style="font-size: 11.5px; color: var(--text-secondary);">
+                                    <i class="fa-solid fa-lightbulb" style="color: var(--accent-amber); margin-right: 6px;"></i> Bullets estruturados no padrão de alta pontuação do Google (XYZ / STAR).
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Live PDF Preview -->
+                        <div class="ats-preview-wrapper" id="atsPreviewWrapper">
+                            <div id="atsCanvasContainer"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- ROUTE 2: PDF STUDIO EDITOR                -->
+            <!-- ========================================== -->
+            <section class="route-view" id="viewStudio">
+                <!-- Studio Header -->
+                <header class="view-header">
+                    <div class="view-header-left">
+                        <div class="view-header-icon header-icon-editor"><i class="fa-solid fa-file-pen"></i></div>
+                        <div class="view-header-titles">
+                            <div class="view-title">
+                                <span id="currentDocName">contract_modelo.pdf</span>
+                            </div>
+                            <div class="view-subtitle">Edição in-place, anotações vetoriais e inspeção de baixo nível</div>
+                        </div>
+                    </div>
+                    <div class="view-header-actions">
+                        <div class="template-selector-wrapper">
+                            <button class="btn btn-secondary btn-sm" id="btnTemplatesMenu" title="Carregar modelo de exemplo">
+                                <i class="fa-solid fa-file-invoice"></i> Modelos <i class="fa-solid fa-chevron-down chevron"></i>
+                            </button>
+                            <div class="dropdown-menu" id="templatesDropdown">
+                                <div class="dropdown-header">Modelos de Demonstração</div>
+                                <button class="dropdown-item" data-template="contract">
+                                    <i class="fa-solid fa-file-contract"></i>
+                                    <div>
+                                        <strong>Contrato de Prestação de Serviços</strong>
+                                        <small>Contém cláusulas e dados sensíveis para teste de redação</small>
+                                    </div>
+                                </button>
+                                <button class="dropdown-item" data-template="invoice">
+                                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                                    <div>
+                                        <strong>Fatura Comercial / Invoice</strong>
+                                        <small>Tabela com itens, valores e cálculo de totais</small>
+                                    </div>
+                                </button>
+                                <button class="dropdown-item" data-template="certificate">
+                                    <i class="fa-solid fa-award"></i>
+                                    <div>
+                                        <strong>Certificado de Conclusão</strong>
+                                        <small>Documento oficial com moldura e assinaturas</small>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-ai btn-sm" id="btnReconstructAi" title="Extrair e reconstruir com Gemini Flash">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Remontar com IA
+                        </button>
+
+                        <label class="btn btn-secondary btn-sm" for="fileUploadInput" title="Abrir PDF local">
+                            <i class="fa-solid fa-folder-open"></i> Abrir
+                        </label>
+                        <input type="file" id="fileUploadInput" accept="application/pdf" style="display: none;">
+
+                        <button class="btn btn-primary btn-sm" id="btnDownloadPdf" title="Baixar PDF modificado">
+                            <i class="fa-solid fa-download"></i> Baixar
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Ribbon Toolbar -->
+                <nav class="studio-ribbon">
+                    <div class="ribbon-group">
+                        <button class="tool-btn active" data-tool="select" id="toolSelect" title="Selecionar e Navegar (V)">
+                            <i class="fa-solid fa-arrow-pointer"></i> <span>Mover</span>
+                        </button>
+                        <button class="tool-btn" data-tool="edit-text" id="toolEditText" title="Editar Texto Existente no PDF (T)">
+                            <i class="fa-solid fa-font"></i> <span>Editar Texto</span>
+                        </button>
+                        <button class="tool-btn" data-tool="add-text" id="toolAddText" title="Adicionar Nova Caixa de Texto">
+                            <i class="fa-solid fa-square-plus"></i> <span>Novo Texto</span>
+                        </button>
+                    </div>
+
+                    <div class="ribbon-divider"></div>
+
+                    <div class="ribbon-group">
+                        <button class="tool-btn" data-tool="highlight" id="toolHighlight" title="Marca-Texto (H)">
+                            <i class="fa-solid fa-highlighter"></i> <span>Destaque</span>
+                        </button>
+                        <button class="tool-btn" data-tool="draw" id="toolDraw" title="Caneta Livre (P)">
+                            <i class="fa-solid fa-pen-nib"></i> <span>Caneta</span>
+                        </button>
+                        <button class="tool-btn" data-tool="rect" id="toolRect" title="Retângulo">
+                            <i class="fa-regular fa-square"></i> <span>Retângulo</span>
+                        </button>
+                    </div>
+
+                    <div class="ribbon-divider"></div>
+
+                    <div class="ribbon-group">
+                        <button class="tool-btn alert-tool" data-tool="redact" id="toolRedact" title="Censurar e Redigir Informações Confidenciais">
+                            <i class="fa-solid fa-shield-halved"></i> <span>Redação Permanente</span>
+                        </button>
+                        <button class="tool-btn" data-tool="signature" id="toolSignature" title="Assinar Digitalmente ou Carimbar">
+                            <i class="fa-solid fa-signature"></i> <span>Assinatura &amp; Selo</span>
+                        </button>
+                    </div>
+
+                    <div class="ribbon-divider"></div>
+
+                    <div class="ribbon-group zoom-group">
+                        <button class="icon-btn" id="btnZoomOut" title="Reduzir Zoom"><i class="fa-solid fa-minus"></i></button>
+                        <span id="zoomLevelLabel" class="zoom-text" style="font-size: 11px; font-weight: 600; padding: 0 4px;">100%</span>
+                        <button class="icon-btn" id="btnZoomIn" title="Aumentar Zoom"><i class="fa-solid fa-plus"></i></button>
+                        <button class="icon-btn" id="btnFitWidth" title="Ajustar à Largura"><i class="fa-solid fa-arrows-left-right"></i></button>
+                        <button class="icon-btn" id="btnFitPage" title="Página Inteira"><i class="fa-solid fa-expand"></i></button>
+                    </div>
+                </nav>
+
+                <!-- Body with Left Sidebar, Canvas, and Properties -->
+                <div class="studio-body">
+                    <!-- Left Sidebar inside Studio -->
+                    <aside class="studio-sidebar" id="mainSidebar">
+                        <div class="sidebar-tabs">
+                            <button class="tab-btn active" data-tab="pages" title="Miniaturas de Páginas">
+                                <i class="fa-solid fa-layer-group"></i> Páginas
+                            </button>
+                            <button class="tab-btn" data-tab="inspector" title="Inspetor Baixo Nível C++">
+                                <i class="fa-solid fa-code"></i> Inspetor Cos
+                            </button>
+                            <button class="tab-btn" data-tab="audit" title="Histórico">
+                                <i class="fa-solid fa-clock-rotate-left"></i> Auditoria
+                            </button>
+                        </div>
+
+                        <div class="tab-pane active" id="panePages">
+                            <div class="pane-header" style="flex-wrap: wrap; gap: 6px; padding-bottom: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                    <span id="pageCountLabel" style="font-weight: 600;">1 Página</span>
+                                    <button class="mini-btn" id="btnRotatePageRight" title="Girar Página 90°">
+                                        <i class="fa-solid fa-rotate-right"></i> Girar
+                                    </button>
+                                </div>
+                                <div class="page-action-toolbar" style="display: flex; gap: 4px; width: 100%; margin-top: 2px;">
+                                    <button class="mini-btn" id="btnSelectAllThumbnails" title="Selecionar / Desmarcar todas as páginas" style="flex: 1;">
+                                        <i class="fa-solid fa-check-double"></i> Todas
+                                    </button>
+                                    <button class="mini-btn" id="btnExportSelectedPages" title="Exportar apenas as páginas selecionadas para um novo PDF" style="flex: 1; color: var(--accent-blue);" disabled>
+                                        <i class="fa-solid fa-file-export"></i> Exportar
+                                    </button>
+                                    <button class="mini-btn" id="btnDeleteSelectedPages" title="Excluir páginas selecionadas do documento" style="flex: 1; color: var(--accent-red);" disabled>
+                                        <i class="fa-solid fa-trash"></i> Excluir
+                                    </button>
+                                </div>
+                                <button class="btn btn-secondary btn-sm" id="btnOpenPageOrganizer" style="width: 100%; margin-top: 2px; font-size: 11px; padding: 4px 8px;">
+                                    <i class="fa-solid fa-table-cells-large"></i> Organizador de Páginas
+                                </button>
+                            </div>
+                            <div class="thumbnails-container" id="thumbnailsList"></div>
+                        </div>
+
+                        <div class="tab-pane" id="paneInspector">
+                            <div class="pane-header">
+                                <span>Árvore de Objetos (Cos Tree)</span>
+                                <button class="mini-btn" id="btnRefreshInspector"><i class="fa-solid fa-arrows-rotate"></i> Atualizar</button>
+                            </div>
+                            <div class="inspector-content" id="inspectorTree">
+                                <div class="empty-state" style="font-size: 11px; color: var(--text-muted); padding: 12px 0;">Carregue um documento para inspecionar.</div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane" id="paneAudit">
+                            <div class="pane-header"><span>Log de Operações do Motor</span></div>
+                            <div class="audit-log-list" id="auditLogList">
+                                <div class="audit-item system" style="font-size: 11px; color: var(--text-muted); padding: 6px 0;">
+                                    <i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 6px;"></i>
+                                    <span>Motor C++ Inicializado</span>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+
+                    <!-- Viewport Canvas -->
+                    <section class="workspace-viewport" id="viewport">
+                        <div class="welcome-dropzone" id="welcomeDropzone" style="text-align: center; margin-top: 40px;">
+                            <div style="font-size: 38px; color: var(--text-muted); margin-bottom: 12px;"><i class="fa-solid fa-file-pdf"></i></div>
+                            <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">PDF Studio Pro</h2>
+                            <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 20px;">Arraste e solte um arquivo PDF aqui ou carregue um modelo de exemplo</p>
+                            <div style="display: flex; gap: 8px; justify-content: center;">
+                                <label class="btn btn-primary" for="fileUploadInput" style="cursor: pointer;">
+                                    <i class="fa-solid fa-folder-open"></i> Abrir Arquivo PDF
+                                </label>
+                                <button class="btn btn-secondary" id="btnWelcomeResume">
+                                    <i class="fa-solid fa-file-lines"></i> Modelo de Exemplo
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="workspace-canvas-container" id="canvasContainer" style="display: none;"></div>
+
+                        <!-- Floating In-Place Text Editor Popup -->
+                        <div class="floating-text-editor" id="floatingTextEditor" style="display: none;">
+                            <div class="editor-header">
+                                <span><i class="fa-solid fa-font"></i> Editar Texto no PDF</span>
+                                <button class="close-btn" id="btnCloseTextEditor">&times;</button>
+                            </div>
+                            <div class="editor-body">
+                                <textarea id="editTextarea" rows="2" placeholder="Digite o novo texto..."></textarea>
+                                <div class="editor-controls">
+                                    <div class="control-group">
+                                        <label>Tamanho:</label>
+                                        <input type="number" id="editFontSize" min="6" max="72" value="12">
+                                    </div>
+                                    <div class="control-group">
+                                        <label>Cor:</label>
+                                        <input type="color" id="editTextColor" value="#000000">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="editor-footer">
+                                <button class="btn btn-sm btn-secondary" id="btnCancelEditText">Cancelar</button>
+                                <button class="btn btn-sm btn-primary" id="btnSaveEditText">
+                                    <i class="fa-solid fa-check"></i> Gravar no PDF
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Floating Permanent Redaction Bar -->
+                        <div class="floating-redaction-bar" id="redactionBar" style="display: none;">
+                            <div class="redaction-info">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>Área marcada para redação confidencial.</span>
+                            </div>
+                            <div class="redaction-actions">
+                                <button class="btn btn-sm btn-secondary" id="btnCancelRedaction">Cancelar</button>
+                                <button class="btn btn-sm btn-danger" id="btnApplyRedaction">
+                                    <i class="fa-solid fa-eraser"></i> Aplicar Redação Permanente
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Properties Panel -->
+                    <aside class="studio-properties" id="propertiesPanel">
+                        <div class="properties-header"><span><i class="fa-solid fa-sliders"></i> Propriedades</span></div>
+                        <div class="properties-content" id="propertiesContent">
+                            <div class="prop-section">
+                                <div class="prop-label">Ferramenta Selecionada</div>
+                                <div class="prop-value" id="currentToolLabel">Mover &amp; Selecionar</div>
+                            </div>
+                            <div class="prop-section" id="sectionTextProps">
+                                <div class="prop-label">Informações do Elemento</div>
+                                <div class="prop-row"><span>Posição X:</span> <strong id="propPosX">-</strong></div>
+                                <div class="prop-row"><span>Posição Y:</span> <strong id="propPosY">-</strong></div>
+                                <div class="prop-row"><span>Fonte:</span> <strong id="propFont">-</strong></div>
+                                <div class="prop-row"><span>Tamanho:</span> <strong id="propSize">-</strong></div>
+                            </div>
+                            <div class="prop-section">
+                                <div class="prop-label">Recursos Pro Ativos</div>
+                                <ul class="pro-features-list">
+                                    <li><i class="fa-solid fa-check"></i> Parsing de Operadores <code>BT/ET</code></li>
+                                    <li><i class="fa-solid fa-check"></i> Descompressão FlateDecode</li>
+                                    <li><i class="fa-solid fa-check"></i> Reconstrução de Tabela XRef</li>
+                                    <li><i class="fa-solid fa-check"></i> Expurgo Físico de Bytes</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- ROUTE 3: PROMPT DOCUMENT STUDIO (ACTIVE)   -->
+            <!-- ========================================== -->
+            <section class="route-view" id="viewPromptDoc">
+                <header class="view-header">
+                    <div class="view-header-left">
+                        <div class="view-header-icon header-icon-prompt"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                        <div class="view-header-titles">
+                            <div class="view-title">Gerador de Documentos por Prompt</div>
+                            <div class="view-subtitle">Redação de minutas e estruturação de cláusulas via IA</div>
+                        </div>
+                    </div>
+                    <div class="view-header-actions">
+                        <div class="ws-live-badge online" title="Status da conexão em tempo real via WebSocket">
+                            <span class="status-dot"></span>
+                            <span>WebSocket: Ao Vivo</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" id="btnRecompilePromptPdf" title="Recompilar PDF com as alterações de cláusulas">
+                            <i class="fa-solid fa-arrows-rotate"></i> Recompilar
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btnOpenPromptDocInStudio" title="Abrir no Editor Nativo C++ para modificações manuais">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir no Estúdio
+                        </button>
+                        <button class="btn btn-primary btn-sm" id="btnDownloadPromptPdf" title="Baixar documento em formato PDF">
+                            <i class="fa-solid fa-download"></i> Baixar PDF
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Split Workspace for Prompt Document Generator -->
+                <div class="prompt-doc-container">
+                    <!-- Left Panel -->
+                    <div class="prompt-doc-left-panel">
+                        <div class="prompt-nav-tabs">
+                            <button class="prompt-nav-tab active" data-tab="prompt">
+                                <i class="fa-solid fa-keyboard"></i> Instrução &amp; Modelos
+                            </button>
+                            <button class="prompt-nav-tab" data-tab="clauses">
+                                <i class="fa-solid fa-list-ol"></i> Cláusulas
+                            </button>
+                            <button class="prompt-nav-tab" data-tab="config">
+                                <i class="fa-solid fa-sliders"></i> Partes &amp; Opções
+                            </button>
+                        </div>
+
+                        <!-- Tab: Prompt & Presets -->
+                        <div class="prompt-tab-content active" id="promptTabPrompt">
+                            <div>
+                                <label class="form-label" style="margin-bottom: 6px;">
+                                    <span>Modelos Rápidos (1-Clique)</span>
+                                    <small>Selecione um preset para preencher</small>
+                                </label>
+                                <div class="prompt-presets-grid" id="promptPresetCards"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <span>Instrução Livre para a IA (Prompt)</span>
+                                    <small>Descreva o documento e condições desejadas</small>
+                                </label>
+                                <textarea class="form-textarea" id="promptDocInput" rows="5" placeholder="Ex: Elaborar contrato completo de prestação de serviços de desenvolvimento de software full-stack, com prazo de 12 meses, pagamento mensal e sigilo..."></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Tom de Voz &amp; Estilo Jurídico</label>
+                                <div class="tone-pills-row" id="promptTonePills">
+                                    <button type="button" class="tone-pill active" data-tone="Jurídico Formal e Equilibrado">Jurídico Formal</button>
+                                    <button type="button" class="tone-pill" data-tone="Jurídico Rigoroso">Jurídico Rigoroso</button>
+                                    <button type="button" class="tone-pill" data-tone="Executivo Comercial">Executivo Comercial</button>
+                                    <button type="button" class="tone-pill" data-tone="Formal Simples">Formal Simples</button>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-ai" id="btnGeneratePromptDoc" style="width: 100%; height: 40px; font-size: 13px;">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Gerar Documento Completo com Gemini
+                            </button>
+                        </div>
+
+                        <!-- Tab: Clauses Editor Accordion -->
+                        <div class="prompt-tab-content" id="promptTabClauses">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);">Estrutura de Cláusulas</span>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btnAddDocClause">
+                                    <i class="fa-solid fa-plus"></i> Nova Cláusula
+                                </button>
+                            </div>
+                            <div id="clausesAccordionContainer"></div>
+                        </div>
+
+                        <!-- Tab: Parties & Configuration -->
+                        <div class="prompt-tab-content" id="promptTabConfig">
+                            <div style="font-size: 12px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Qualificação das Partes</div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Nome / Razão Social - Contratante (Parte 1)</label>
+                                <input type="text" class="form-input" id="partyContratanteName" value="TechCorp Soluções Digitais Ltda">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">CNPJ / CPF - Contratante</label>
+                                <input type="text" class="form-input" id="partyContratanteDoc" value="CNPJ nº 12.345.678/0001-90">
+                            </div>
+
+                            <div class="form-group" style="margin-top: 8px;">
+                                <label class="form-label">Nome / Razão Social - Contratada (Parte 2)</label>
+                                <input type="text" class="form-input" id="partyContratadaName" value="DevStudio Consultoria em Software ME">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">CNPJ / CPF - Contratada</label>
+                                <input type="text" class="form-input" id="partyContratadaDoc" value="CNPJ nº 98.765.432/0001-10">
+                            </div>
+
+                            <div class="form-group" style="margin-top: 8px;">
+                                <label class="form-label">Foro de Eleição</label>
+                                <input type="text" class="form-input" id="inputDocForum" value="Comarca de São Paulo - SP">
+                            </div>
+
+                            <div class="form-group" style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
+                                <label class="form-label">Cláusulas Obrigatórias</label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-primary); cursor: pointer;">
+                                    <input type="checkbox" id="optDocLgpd" checked>
+                                    <span>Incluir Cláusula de Proteção de Dados (LGPD)</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-primary); cursor: pointer;">
+                                    <input type="checkbox" id="optDocIp" checked>
+                                    <span>Incluir Cláusula de Propriedade Intelectual</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel: Live PDF Preview -->
+                    <div class="prompt-doc-right-panel">
+                        <div class="doc-preview-meta-bar">
+                            <div class="doc-meta-title-box">
+                                <i class="fa-solid fa-file-contract" style="color: var(--accent-blue);"></i>
+                                <span class="doc-meta-title" id="promptDocMetaTitle">Contrato de Prestação de Serviços</span>
+                                <span class="doc-meta-badge" id="promptDocMetaClausesCount">5 Cláusulas</span>
+                            </div>
+                        </div>
+
+                        <div class="prompt-pdf-preview-wrapper" id="promptPdfPreviewWrapper">
+                            <div id="promptPdfCanvasContainer"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- ROUTE 4: LGPD SCANNER & REDACTION (ACTIVE) -->
+            <!-- ========================================== -->
+            <section class="route-view" id="viewLgpdRedact">
+                <header class="view-header">
+                    <div class="view-header-left">
+                        <div class="view-header-icon header-icon-lgpd"><i class="fa-solid fa-shield-halved"></i></div>
+                        <div class="view-header-titles">
+                            <div class="view-title">Scanner LGPD &amp; Redação Permanente</div>
+                            <div class="view-subtitle">Auditoria de vulnerabilidades e expurgo de dados sensíveis (Lei 13.709/2018)</div>
+                        </div>
+                    </div>
+                    <div class="view-header-actions">
+                        <div class="ws-live-badge online" title="Status da conexão em tempo real via WebSocket">
+                            <span class="status-dot"></span>
+                            <span>WebSocket: Ao Vivo</span>
+                        </div>
+                        <input type="file" id="lgpdFileInput" accept="application/pdf" style="display: none;">
+                        <button class="btn btn-secondary btn-sm" id="btnLgpdUpload" title="Importar outro PDF para auditoria LGPD">
+                            <i class="fa-solid fa-folder-open"></i> Importar PDF
+                        </button>
+                        <button class="btn btn-ai btn-sm" id="btnStartLgpdScan" title="Iniciar varredura híbrida com Regex e Gemini">
+                            <i class="fa-solid fa-magnifying-glass-chart"></i> Iniciar Varredura
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btnLgpdComplianceReport" title="Gerar Relatório de Conformidade para o DPO em PDF">
+                            <i class="fa-solid fa-file-shield"></i> Relatório DPO
+                        </button>
+                        <button class="btn btn-primary btn-sm" id="btnDownloadRedactedPdf" title="Baixar documento protegido com expurgo de dados">
+                            <i class="fa-solid fa-download"></i> Baixar PDF
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Split Workspace for LGPD Scanner -->
+                <div class="lgpd-container">
+                    <!-- Left Panel: Metrics, Filters & Sensitive Entities Table -->
+                    <div class="lgpd-left-panel">
+                        <!-- Metrics Grid -->
+                        <div class="lgpd-metrics-grid">
+                            <div class="lgpd-metric-card">
+                                <span class="lgpd-metric-label">Dados Sensíveis</span>
+                                <span class="lgpd-metric-value" id="lgpdMetricTotal">0</span>
+                            </div>
+                            <div class="lgpd-metric-card">
+                                <span class="lgpd-metric-label">Severidade Alta</span>
+                                <span class="lgpd-metric-value high-risk" id="lgpdMetricHigh">0</span>
+                            </div>
+                            <div class="lgpd-metric-card">
+                                <span class="lgpd-metric-label">Severidade Média</span>
+                                <span class="lgpd-metric-value med-risk" id="lgpdMetricMed">0</span>
+                            </div>
+                            <div class="lgpd-metric-card">
+                                <span class="lgpd-metric-label">Categorias</span>
+                                <span class="lgpd-metric-value" id="lgpdMetricCategories">0</span>
+                            </div>
+                        </div>
+
+                        <!-- Controls & Filters Bar -->
+                        <div class="lgpd-controls-bar">
+                            <div class="lgpd-filters-bar">
+                                <button type="button" class="lgpd-filter-pill active" data-filter="all">Todos</button>
+                                <button type="button" class="lgpd-filter-pill" data-filter="Documentos Pessoais">CPFs / Docs</button>
+                                <button type="button" class="lgpd-filter-pill" data-filter="Dados Financeiros">Financeiro</button>
+                                <button type="button" class="lgpd-filter-pill" data-filter="Contatos Pessoais">Contatos</button>
+                                <button type="button" class="lgpd-filter-pill" data-filter="Dados Sensíveis Especiais">Dados Especiais</button>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" id="btnLgpdSelectAll">
+                                <i class="fa-solid fa-check-double"></i> Marcar / Desmarcar Todos
+                            </button>
+                        </div>
+
+                        <!-- Entities Table -->
+                        <div class="lgpd-table-wrapper">
+                            <table class="lgpd-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 36px; text-align: center;">Sel.</th>
+                                        <th>Categoria / Tipo</th>
+                                        <th>Dado no Documento</th>
+                                        <th>Vulnerabilidade &amp; Risco LGPD</th>
+                                        <th>Como Corrigir &amp; Sugestão Segura</th>
+                                        <th>Severidade</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lgpdEntitiesTableBody">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 12px;">
+                                            Clique em "Iniciar Varredura com IA" para identificar dados pessoais e sensíveis no documento.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Bottom Action Footer -->
+                        <div class="lgpd-actions-footer">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 11.5px; color: var(--text-secondary); font-weight: 600;">Estilo de Redação:</label>
+                                <select class="form-input" id="selectLgpdMode" style="height: 30px; font-size: 11.5px; width: 170px;">
+                                    <option value="black_bar">Tarja Preta (Expurgo)</option>
+                                    <option value="mask">Mascaramento Estilizado</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-ai" id="btnApplyLgpdRedaction" style="font-size: 12.5px;">
+                                <i class="fa-solid fa-eraser"></i> Aplicar Redação Permanente
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel: Live PDF Preview -->
+                    <div class="lgpd-right-panel">
+                        <div class="doc-preview-meta-bar">
+                            <div class="doc-meta-title-box">
+                                <i class="fa-solid fa-shield-halved" style="color: var(--accent-blue);"></i>
+                                <span class="doc-meta-title" id="lgpdCurrentDocName">contrato_prestacao_servicos.pdf</span>
+                                <span class="doc-meta-badge">Visualização de Auditoria</span>
+                            </div>
+                        </div>
+
+                        <div class="prompt-pdf-preview-wrapper" id="lgpdPdfPreviewWrapper">
+                            <div id="lgpdPdfCanvasContainer"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- ROUTE 5: CONTRACT RISK AUDITOR (ACTIVE)    -->
+            <!-- ========================================== -->
+            <section class="route-view" id="viewContractAudit">
+                <header class="view-header">
+                    <div class="view-header-left">
+                        <div class="view-header-icon header-icon-audit"><i class="fa-solid fa-scale-balanced"></i></div>
+                        <div class="view-header-titles">
+                            <div class="view-title">Auditor de Riscos Contratuais</div>
+                            <div class="view-subtitle">Diagnóstico preventivo de cláusulas abusivas e redação equilibrada via IA</div>
+                        </div>
+                    </div>
+                    <div class="view-header-actions">
+                        <div class="ws-live-badge online" title="Status da conexão em tempo real via WebSocket">
+                            <span class="status-dot"></span>
+                            <span>WebSocket: Ao Vivo</span>
+                        </div>
+                        <button class="btn btn-ai btn-sm" id="btnStartContractAudit" title="Iniciar auditoria jurídica preventiva com Gemini">
+                            <i class="fa-solid fa-gavel"></i> Auditar com IA
+                        </button>
+                        <button class="btn btn-primary btn-sm" id="btnExportLegalOpinion" title="Exportar parecer jurídico e scorecard de riscos em PDF">
+                            <i class="fa-solid fa-file-pdf"></i> Baixar Parecer
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Split Workspace for Contract Auditor -->
+                <div class="audit-container">
+                    <!-- Left Panel: Scorecard & Clause Findings -->
+                    <div class="audit-left-panel">
+                        <div class="audit-scrollable-content">
+                            <!-- Scorecard Card -->
+                            <div class="audit-scorecard">
+                                <div class="audit-score-main">
+                                    <div>
+                                        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Score de Risco</div>
+                                        <div class="audit-score-num" id="auditScoreVal">--</div>
+                                    </div>
+                                    <span class="audit-risk-badge badge-med" id="auditRiskLevelBadge">Aguardando Auditoria</span>
+                                </div>
+                                <div style="display: flex; gap: 12px; text-align: right;">
+                                    <div>
+                                        <div style="font-size: 10px; color: var(--text-muted);">Total</div>
+                                        <strong style="font-size: 13px; color: var(--text-primary);" id="auditTotalClauses">0</strong>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 10px; color: var(--accent-red);">Críticas</div>
+                                        <strong style="font-size: 13px; color: var(--accent-red);" id="auditCriticalClauses">0</strong>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 10px; color: var(--accent-yellow);">Atenção</div>
+                                        <strong style="font-size: 13px; color: var(--accent-yellow);" id="auditWarningClauses">0</strong>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 10px; color: var(--accent-green);">Seguras</div>
+                                        <strong style="font-size: 13px; color: var(--accent-green);" id="auditSafeClauses">0</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Executive Opinion Box -->
+                            <div class="audit-opinion-box">
+                                <div class="audit-opinion-title">
+                                    <i class="fa-solid fa-user-tie" style="color: var(--accent-blue);"></i>
+                                    <span>Parecer Executivo do Auditor</span>
+                                </div>
+                                <div class="audit-opinion-text" id="auditExecutiveSummaryText">
+                                    Clique em "Auditar com IA" para avaliar riscos de rescisão, propriedade intelectual, multas e cláusulas leoninas.
+                                </div>
+                                <ul class="audit-top-alerts-list" id="auditTopAlertsList"></ul>
+                            </div>
+
+                            <!-- Filter Pills -->
+                            <div style="display: flex; gap: 6px; align-items: center; justify-content: space-between;">
+                                <div style="display: flex; gap: 6px;">
+                                    <button type="button" class="lgpd-filter-pill audit-filter-pill active" data-filter="all">Todas</button>
+                                    <button type="button" class="lgpd-filter-pill audit-filter-pill" data-filter="CRÍTICA">Críticas</button>
+                                    <button type="button" class="lgpd-filter-pill audit-filter-pill" data-filter="ATENÇÃO">Atenção</button>
+                                    <button type="button" class="lgpd-filter-pill audit-filter-pill" data-filter="SEGURA">Seguras</button>
+                                </div>
+                                <small style="font-size: 11px; color: var(--text-muted);">Auditoria Preventiva</small>
+                            </div>
+
+                            <!-- Clauses Cards Container -->
+                            <div id="auditClausesList">
+                                <div style="color: var(--text-muted); font-size: 12px; padding: 12px 0;">
+                                    Nenhuma cláusula avaliada. Inicie a auditoria acima.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel: Live PDF Preview -->
+                    <div class="audit-right-panel">
+                        <div class="doc-preview-meta-bar">
+                            <div class="doc-meta-title-box">
+                                <i class="fa-solid fa-scale-balanced" style="color: var(--accent-blue);"></i>
+                                <span class="doc-meta-title" id="auditCurrentDocName">contract_modelo.pdf</span>
+                                <span class="doc-meta-badge">Visualização Contratual</span>
+                            </div>
+                        </div>
+
+                        <div class="prompt-pdf-preview-wrapper" id="auditPdfPreviewWrapper">
+                            <div id="auditPdfCanvasContainer"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- ROUTE 6: CHAT COPILOT WITH PDF (ACTIVE)    -->
+            <!-- ========================================== -->
+            <section class="route-view" id="viewChatPdf">
+                <header class="view-header">
+                    <div class="view-header-left">
+                        <div class="view-header-icon header-icon-chat"><i class="fa-solid fa-comments"></i></div>
+                        <div class="view-header-titles">
+                            <div class="view-title">Chat Copilot com PDF</div>
+                            <div class="view-subtitle">Assistente conversacional ancorado no documento para perguntas, resumos e orientações</div>
+                        </div>
+                    </div>
+                    <div class="view-header-actions">
+                        <div class="ws-live-badge online" title="Status da conexão em tempo real via WebSocket">
+                            <span class="status-dot"></span>
+                            <span>WebSocket: Ao Vivo</span>
+                        </div>
+                        <input type="file" id="chatFileInput" accept="application/pdf" style="display: none;">
+                        <button class="btn btn-secondary btn-sm" id="btnChatUploadPdf" title="Importar qualquer documento PDF para conversar e analisar">
+                            <i class="fa-solid fa-folder-open"></i> Importar PDF
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btnClearChatHistory" title="Limpar histórico da conversa">
+                            <i class="fa-solid fa-rotate-left"></i> Limpar Chat
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Split Workspace for Chat Copilot -->
+                <div class="chat-pdf-container">
+                    <!-- Left Panel: Chat Interface -->
+                    <div class="chat-left-panel">
+                        <!-- Quick Action Chips -->
+                        <div class="chat-quick-chips-bar">
+                            <button type="button" class="chat-quick-chip" data-prompt="Elabore um resumo executivo deste contrato em 3 tópicos claros.">
+                                <i class="fa-solid fa-bolt" style="color: var(--accent-yellow);"></i> Resumo em 3 Pontos
+                            </button>
+                            <button type="button" class="chat-quick-chip" data-prompt="Quais são os prazos, obrigações e penalidades estipulados para a contratada?">
+                                <i class="fa-solid fa-clock"></i> Prazos &amp; Entregas
+                            </button>
+                            <button type="button" class="chat-quick-chip" data-prompt="Explique as cláusulas financeiras e de sigilo em linguagem simples para um leigo.">
+                                <i class="fa-solid fa-lightbulb"></i> Traduzir Juridiquês
+                            </button>
+                            <button type="button" class="chat-quick-chip" data-prompt="Crie uma lista de pontos de atenção e roteiro para negociar melhorias neste contrato.">
+                                <i class="fa-solid fa-handshake"></i> Roteiro de Negociação
+                            </button>
+                        </div>
+
+                        <!-- Messages Container -->
+                        <div class="chat-messages-container" id="chatMessagesContainer">
+                            <div class="chat-message-item bot">
+                                <div class="chat-avatar"><i class="fa-solid fa-robot"></i></div>
+                                <div class="chat-bubble">
+                                    Olá! Sou o <strong>Copilot de IA</strong> do PDF Studio Pro. Pergunte qualquer coisa sobre o documento aberto ou clique em uma das ações rápidas acima para obter resumos, prazos ou estratégias de negociação!
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chat Input Bar -->
+                        <div class="chat-input-bar">
+                            <button type="button" class="btn btn-secondary btn-sm" id="btnChatAttachFile" title="Importar novo PDF para análise" style="height: 38px; padding: 0 12px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fa-solid fa-paperclip"></i>
+                            </button>
+                            <input type="text" class="form-input" id="chatPdfInput" placeholder="Faça uma pergunta sobre o documento..." style="flex: 1; height: 38px; font-size: 12.5px;">
+                            <button class="btn btn-ai" id="btnSendChatPdf" style="height: 38px; padding: 0 16px;">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel: Live PDF Preview -->
+                    <div class="chat-right-panel">
+                        <div class="doc-preview-meta-bar">
+                            <div class="doc-meta-title-box">
+                                <i class="fa-solid fa-comments" style="color: var(--accent-blue);"></i>
+                                <span class="doc-meta-title" id="chatPdfDocName">contract_modelo.pdf</span>
+                                <span class="doc-meta-badge">Documento Conectado</span>
+                            </div>
+                        </div>
+
+                        <div class="prompt-pdf-preview-wrapper" id="chatPdfPreviewWrapper">
+                            <div id="chatPdfCanvasContainer"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- ROUTE 7: IMAGES TO PDF STUDIO              -->
+            <!-- ========================================== -->
+            <section class="route-view" id="viewImagesToPdf">
+                <header class="view-header">
+                    <div class="view-header-left">
+                        <div class="view-header-icon" style="background: rgba(6, 182, 212, 0.15); color: #06B6D4;">
+                            <i class="fa-solid fa-images"></i>
+                        </div>
+                        <div class="view-header-titles">
+                            <div class="view-title">Juntar Imagens em PDF</div>
+                            <div class="view-subtitle">Mescle fotos, recibos e documentos escaneados em um único arquivo PDF com controle de ordem e layout</div>
+                        </div>
+                    </div>
+                    <div class="view-header-actions">
+                        <input type="file" id="imgToPdfFileInput" accept="image/png,image/jpeg,image/webp,image/jpg" multiple style="display: none;">
+                        <button class="btn btn-secondary btn-sm" id="btnImgSelectFiles">
+                            <i class="fa-solid fa-plus"></i> Adicionar Imagens
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btnClearImagesList">
+                            <i class="fa-solid fa-trash"></i> Limpar
+                        </button>
+                        <button class="btn btn-primary btn-sm" id="btnCompileImagesToPdf" disabled>
+                            <i class="fa-solid fa-file-pdf"></i> Compilar em PDF
+                        </button>
+                        <button class="btn btn-sm" id="btnHeaderDownloadImagesPdf" style="display: none; background: #10B981; color: white; border: none; font-weight: 600;">
+                            <i class="fa-solid fa-download"></i> Baixar PDF
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btnHeaderOpenImagesStudio" style="display: none;">
+                            <i class="fa-solid fa-signature"></i> Abrir no Editor
+                        </button>
+                    </div>
+                </header>
+
+                <div class="images-to-pdf-container" style="display: flex; gap: 20px; padding: 16px 20px; height: calc(100vh - 65px); box-sizing: border-box; overflow: hidden;">
+                    <!-- Left: Upload & Grid Panel -->
+                    <div class="img-left-panel" style="flex: 1; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; min-width: 0;">
+                        <!-- Dropzone -->
+                        <div class="img-dropzone" id="imgToPdfDropzone" style="border: 2px dashed var(--border-color); border-radius: var(--radius-md); padding: 28px; text-align: center; background: var(--bg-card); cursor: pointer; transition: all 0.2s ease;">
+                            <i class="fa-solid fa-cloud-arrow-up" style="font-size: 32px; color: #06B6D4; margin-bottom: 10px;"></i>
+                            <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">Arraste fotos ou documentos aqui</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">Suporta múltiplos PNG, JPG, JPEG e WebP • Reordene antes de gerar</div>
+                        </div>
+
+                        <!-- Header with count -->
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 600; font-size: 13px;">Ordem das Páginas</span>
+                            <span class="nav-badge" id="imagesCountBadge" style="background: var(--bg-elevated); color: var(--text-secondary);">0 Imagem(ns)</span>
+                        </div>
+
+                        <!-- Empty state -->
+                        <div id="imagesEmptyState" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; color: var(--text-muted); text-align: center; background: rgba(255,255,255,0.01); border-radius: var(--radius-sm);">
+                            <i class="fa-regular fa-image" style="font-size: 36px; margin-bottom: 12px; opacity: 0.4;"></i>
+                            <div>Nenhuma imagem adicionada ainda.</div>
+                            <small>Clique em "Adicionar Imagens" acima ou solte seus arquivos no quadro pontilhado.</small>
+                        </div>
+
+                        <!-- Grid of Image Cards -->
+                        <div class="images-grid" id="imagesToPdfGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px;"></div>
+                    </div>
+
+                    <!-- Right: Settings & Result Panel -->
+                    <div class="img-right-panel" style="width: 360px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; max-height: 100%; padding-right: 6px;">
+                        <!-- Settings Card -->
+                        <div class="card" style="padding: 16px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                            <h4 style="margin: 0 0 14px 0; font-size: 13px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-sliders" style="color: #06B6D4;"></i> Configurações do PDF
+                            </h4>
+
+                            <div style="margin-bottom: 14px;">
+                                <label style="font-size: 11.5px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Tamanho de Página</label>
+                                <select class="form-input" id="imgOptPageSize" style="width: 100%;">
+                                    <option value="A4" selected>Padrão A4 (Ajuste Proporcional)</option>
+                                    <option value="fit-image">Ajustar ao Tamanho da Imagem</option>
+                                </select>
+                            </div>
+
+                            <div style="margin-bottom: 14px;">
+                                <label style="font-size: 11.5px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Margens da Página</label>
+                                <select class="form-input" id="imgOptMargin" style="width: 100%;">
+                                    <option value="0">Sem Margens (Totalmente Sangrado)</option>
+                                    <option value="15">Margem Fina (15 pt)</option>
+                                    <option value="30" selected>Margem Padrão (30 pt)</option>
+                                </select>
+                            </div>
+
+                            <div style="margin-bottom: 16px;">
+                                <label style="font-size: 11.5px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Nome do Arquivo de Saída</label>
+                                <input type="text" class="form-input" id="imgOptDocName" placeholder="Imagens_Compiladas" value="Documento_Compilado" style="width: 100%;">
+                            </div>
+                        </div>
+
+                        <!-- Result Card (appears after compilation) -->
+                        <div class="card" id="imgToPdfResultCard" style="display: none; padding: 16px; background: var(--bg-surface); border: 1px solid var(--accent-green); border-radius: var(--radius-md);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                <div style="display: flex; align-items: center; gap: 8px; color: var(--accent-green); font-weight: 600; font-size: 13px;">
+                                    <i class="fa-solid fa-circle-check"></i> PDF Gerado com Sucesso!
+                                </div>
+                                <span class="nav-badge" style="background: rgba(16, 185, 129, 0.15); color: #10B981; font-weight: 600;">Pronto</span>
+                            </div>
+
+                            <!-- Prominent Buttons placed immediately at the top so they are never cut off -->
+                            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
+                                <button class="btn btn-primary" id="btnDownloadImagesPdf" style="width: 100%; background: #10B981; border-color: #10B981; font-weight: 600; padding: 8px 12px;">
+                                    <i class="fa-solid fa-download"></i> Baixar PDF Compilado Agora
+                                </button>
+                                <button class="btn btn-secondary btn-sm" id="btnOpenImagesInStudio" style="width: 100%;">
+                                    <i class="fa-solid fa-signature"></i> Abrir no Editor para Assinar
+                                </button>
+                            </div>
+
+                            <div style="display: flex; justify-content: center; margin-bottom: 10px; background: #0b0f17; padding: 6px; border-radius: 4px;">
+                                <canvas id="imgToPdfPreviewCanvas" style="max-height: 140px; max-width: 100%; box-shadow: 0 4px 10px rgba(0,0,0,0.4);"></canvas>
+                            </div>
+                            <div id="imgToPdfResultDetails" style="font-size: 11px; color: var(--text-secondary); line-height: 1.6;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Digital Signature & Stamp Modal -->
+        <div class="modal-overlay" id="signatureModal" style="display: none;">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-signature"></i> Assinatura &amp; Selos Digitais</h3>
+                    <button class="close-btn" id="btnCloseSigModal">&times;</button>
+                </div>
+                <div class="modal-tabs">
+                    <button class="sig-tab-btn active" data-tab="draw">Desenhar Assinatura</button>
+                    <button class="sig-tab-btn" data-tab="type">Digitar Nome</button>
+                    <button class="sig-tab-btn" data-tab="stamp">Selo Oficial</button>
+                </div>
+                <div class="modal-body">
+                    <div class="sig-tab-content active" id="tabSigDraw">
+                        <div class="sig-canvas-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span style="font-size: 11px; color: var(--text-muted);">Cor da Caneta:</span>
+                                <button type="button" class="btn-color-pick active" data-color="#1E3A8A" style="width: 22px; height: 22px; border-radius: 50%; background: #1E3A8A; border: 2px solid white; cursor: pointer;"></button>
+                                <button type="button" class="btn-color-pick" data-color="#111827" style="width: 22px; height: 22px; border-radius: 50%; background: #111827; border: 1px solid rgba(255,255,255,0.2); cursor: pointer;"></button>
+                                <button type="button" class="btn-color-pick" data-color="#DC2626" style="width: 22px; height: 22px; border-radius: 50%; background: #DC2626; border: 1px solid rgba(255,255,255,0.2); cursor: pointer;"></button>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-secondary" id="btnClearSig"><i class="fa-solid fa-eraser"></i> Limpar</button>
+                        </div>
+                        <canvas id="sigCanvas" width="480" height="180" class="sig-draw-canvas"></canvas>
+                        <div class="sig-canvas-footer" style="margin-top: 6px;">
+                            <small><i class="fa-solid fa-pen-nib"></i> Assine desenhando com o mouse ou tela touch</small>
+                        </div>
+                    </div>
+                    <div class="sig-tab-content" id="tabSigType">
+                        <label style="font-size: 11.5px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Nome para Assinatura:</label>
+                        <input type="text" id="sigTextInput" class="form-input" placeholder="Digite seu nome completo..." value="Gabriel Medeiros">
+                        <div style="margin-top: 12px; margin-bottom: 4px; font-size: 11px; color: var(--text-muted);">Estilo Tipográfico:</div>
+                        <div class="sig-preview-card" id="sigTypePreview" style="font-family: 'Caveat', cursive; font-size: 38px; color: #1E3A8A; min-height: 80px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.03); border: 1px dashed var(--border-color); border-radius: 6px;">Gabriel Medeiros</div>
+                    </div>
+                    <div class="sig-tab-content" id="tabSigStamp">
+                        <div class="stamp-options" style="display: flex; flex-direction: column; gap: 8px;">
+                            <label class="stamp-card selected">
+                                <input type="radio" name="stampType" value="APPROVED" checked>
+                                <div class="stamp-badge approved" style="font-size: 11px;"><i class="fa-solid fa-circle-check"></i> APROVADO / DIGITALLY SIGNED</div>
+                            </label>
+                            <label class="stamp-card">
+                                <input type="radio" name="stampType" value="CONFIDENTIAL">
+                                <div class="stamp-badge confidential" style="font-size: 11px;"><i class="fa-solid fa-lock"></i> CONFIDENCIAL / RESTRITO</div>
+                            </label>
+                            <label class="stamp-card">
+                                <input type="radio" name="stampType" value="AUTHENTICATED">
+                                <div class="stamp-badge authenticated" style="font-size: 11px;"><i class="fa-solid fa-stamp"></i> CÓPIA AUTENTICADA / CONFERE COM ORIGINAL</div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" id="btnCancelSigModal">Cancelar</button>
+                    <button class="btn btn-secondary" id="btnPlaceSignatureOnDoc" title="Clique em qualquer ponto do PDF para posicionar">
+                        <i class="fa-solid fa-crosshairs"></i> Posicionar com o Mouse
+                    </button>
+                    <button class="btn btn-primary" id="btnApplySignature">
+                        <i class="fa-solid fa-stamp"></i> Inserir no Rodapé
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page Extractor & Splitter Modal -->
+        <div class="modal-overlay" id="pageExtractorModal" style="display: none;">
+            <div class="modal-card" style="max-width: 860px; width: 92vw;">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-table-cells-large"></i> Organizador &amp; Extrator de Páginas</h3>
+                    <button class="close-btn" id="btnClosePageExtractorModal">&times;</button>
+                </div>
+                <div class="modal-body" style="padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; background: var(--bg-surface); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 12px; color: var(--text-secondary); white-space: nowrap; font-weight: 500;">Intervalo de Páginas:</label>
+                            <input type="text" id="inputPageRange" class="form-input" placeholder="Ex: 1-3, 5, 8" style="width: 170px; padding: 4px 8px; font-size: 12px;">
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <span id="selectedPagesCountBadge" style="font-size: 11.5px; color: var(--text-muted);">0 selecionada(s)</span>
+                            <button type="button" class="btn btn-sm btn-secondary" id="btnModalSelectAll">
+                                <i class="fa-solid fa-check-double"></i> Selecionar Todas
+                            </button>
+                        </div>
+                    </div>
+                    <div class="modal-pages-grid" id="modalPagesGrid" style="max-height: 52vh; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 14px; padding: 4px;"></div>
+                </div>
+                <div class="modal-footer" style="display: flex; justify-content: space-between;">
+                    <button class="btn btn-secondary" id="btnCancelPageExtractor">Fechar</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-sm" id="btnModalDeletePages" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3);" disabled>
+                            <i class="fa-solid fa-trash"></i> Excluir Páginas Selecionadas
+                        </button>
+                        <button class="btn btn-primary btn-sm" id="btnModalExportPages" disabled>
+                            <i class="fa-solid fa-file-export"></i> Exportar Páginas Selecionadas
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Images to PDF Success Modal -->
+        <div class="modal-overlay" id="imgToPdfSuccessModal" style="display: none;">
+            <div class="modal-card" style="max-width: 480px; text-align: center;">
+                <div class="modal-header" style="justify-content: center; position: relative;">
+                    <div style="display: flex; align-items: center; gap: 8px; color: #10B981; font-size: 15px; font-weight: 700;">
+                        <i class="fa-solid fa-circle-check"></i> PDF Compilado com Sucesso!
+                    </div>
+                    <button class="close-btn" id="btnCloseImgSuccessModal" style="position: absolute; right: 14px;">&times;</button>
+                </div>
+                <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 14px;">
+                    <div id="imgSuccessModalDetails" style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.5;"></div>
+                    
+                    <div style="background: #0b0f17; padding: 10px; border-radius: 6px; width: 100%; display: flex; justify-content: center;">
+                        <canvas id="imgSuccessModalCanvas" style="max-height: 160px; max-width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.5);"></canvas>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 4px;">
+                        <button class="btn btn-primary" id="btnModalDownloadPdf" style="width: 100%; background: #10B981; border-color: #10B981; padding: 10px; font-size: 13.5px; font-weight: 600;">
+                            <i class="fa-solid fa-download"></i> Baixar PDF Compilado
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btnModalOpenInEditor" style="width: 100%; padding: 8px; font-size: 12.5px;">
+                            <i class="fa-solid fa-file-signature"></i> Abrir no Editor para Assinar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toastContainer" class="toast-container"></div>
+    </div>
+
+    <!-- Application Modules -->
+    <script src="js/ws_client.js"></script>
+    <script src="js/pdf_viewer.js"></script>
+    <script src="js/text_editor.js"></script>
+    <script src="js/annotator.js"></script>
+    <script src="js/redactor.js"></script>
+    <script src="js/signature.js"></script>
+    <script src="js/page_manager.js"></script>
+    <script src="js/inspector.js"></script>
+    <script src="js/images_to_pdf.js"></script>
+    <script src="js/ats_studio.js"></script>
+    <script src="js/prompt_doc_studio.js"></script>
+    <script src="js/lgpd_scanner.js"></script>
+    <script src="js/contract_auditor.js"></script>
+    <script src="js/chat_pdf.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
