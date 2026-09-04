@@ -45,19 +45,32 @@ class CppEngineBridge {
             });
 
             proc.on('close', (code) => {
-                if (code !== 0) {
+                const trimmedOut = stdoutData.trim();
+                const parseJsonResilient = (str) => {
                     try {
-                        const parsed = JSON.parse(stdoutData);
-                        return reject(new Error(parsed.error || `Process exited with code ${code}`));
+                        return JSON.parse(str);
                     } catch (e) {
-                        return reject(new Error(stderrData || stdoutData || `Process exited with code ${code}`));
+                        const start = str.indexOf('{');
+                        const end = str.lastIndexOf('}');
+                        if (start !== -1 && end !== -1 && end > start) {
+                            try {
+                                return JSON.parse(str.substring(start, end + 1));
+                            } catch (e2) {}
+                        }
+                        return null;
                     }
+                };
+
+                if (code !== 0) {
+                    const parsed = parseJsonResilient(trimmedOut);
+                    if (parsed && parsed.error) return reject(new Error(parsed.error));
+                    return reject(new Error(stderrData || trimmedOut || `Process exited with code ${code}`));
                 }
 
-                try {
-                    const parsed = JSON.parse(stdoutData);
+                const parsed = parseJsonResilient(trimmedOut);
+                if (parsed) {
                     resolve(parsed);
-                } catch (e) {
+                } else {
                     resolve({ raw: stdoutData });
                 }
             });
@@ -80,8 +93,10 @@ class CppEngineBridge {
         return this.runCommand(['--edit-text', inputPath, outputPath, String(pageIndex), oldText, newText]);
     }
 
-    static async redact(inputPath, outputPath, pageIndex, x, y, width, height, overlayText = '[REDACTED]') {
-        return this.runCommand(['--redact', inputPath, outputPath, String(pageIndex), String(x), String(y), String(width), String(height), overlayText]);
+    static async redact(inputPath, outputPath, pageIndex, x, y, width, height, overlayText = '[REDACTED]', keyword = '') {
+        const args = ['--redact', inputPath, outputPath, String(pageIndex), String(x), String(y), String(width), String(height), overlayText];
+        if (keyword) args.push(keyword);
+        return this.runCommand(args);
     }
 
     static async annotate(inputPath, outputPath, pageIndex, type, x, y, width, height, text = '') {
@@ -90,6 +105,10 @@ class CppEngineBridge {
 
     static async rotatePage(inputPath, outputPath, pageIndex, angleDelta) {
         return this.runCommand(['--rotate-page', inputPath, outputPath, String(pageIndex), String(angleDelta)]);
+    }
+
+    static async compress(inputPath, outputPath, profile = 'balanced') {
+        return this.runCommand(['--compress', inputPath, outputPath, profile]);
     }
 }
 

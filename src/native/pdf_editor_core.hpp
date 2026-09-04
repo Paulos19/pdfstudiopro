@@ -4,6 +4,7 @@
 #include "pdf_content.hpp"
 #include <string>
 #include <vector>
+#include <set>
 #include <iostream>
 #include <sstream>
 #include <algorithm>
@@ -27,6 +28,23 @@ struct AnnotationOp {
     double opacity = 0.5;
     std::string textContent;
     std::vector<std::pair<double, double>> pathPoints; // for draw
+};
+
+struct RedactionResult {
+    bool success = false;
+    int purgedChars = 0;
+    int purgedBlocks = 0;
+    bool metadataScrubbed = false;
+};
+
+struct OptimizationResult {
+    bool success = false;
+    size_t originalBytes = 0;
+    size_t optimizedBytes = 0;
+    int removedObjects = 0;
+    int recompressedStreams = 0;
+    double reductionPercent = 0.0;
+    std::string profile = "balanced";
 };
 
 class EditorCore {
@@ -76,46 +94,104 @@ public:
         return Writer::writePdf(outputPath, parser.objects, parser.catalog);
     }
 
-    static bool applyRedactions(Parser& parser, const std::vector<RedactionBox>& redactions, const std::string& outputPath) {
+    static RedactionResult applyRedactions(
+        Parser& parser,
+        const std::vector<RedactionBox>& redactions,
+        const std::string& outputPath,
+        const std::vector<std::string>& keywords = {}
+    ) {
+        RedactionResult res;
+
+        // Group redactions by page
+        std::map<int, std::vector<RedactionBox>> redsByPage;
         for (const auto& red : redactions) {
-            if (red.pageIndex < 0 || red.pageIndex >= (int)parser.pages.size()) continue;
-            int pageObjNum = parser.pages[red.pageIndex].objNum;
+            redsByPage[red.pageIndex].push_back(red);
+        }
+
+        for (const auto& pair : redsByPage) {
+            int pageIndex = pair.first;
+            const auto& pageReds = pair.second;
+
+            if (pageIndex < 0 || pageIndex >= (int)parser.pages.size()) continue;
+            int pageObjNum = parser.pages[pageIndex].objNum;
             if (!parser.objects.count(pageObjNum)) continue;
 
             auto pageObj = parser.objects[pageObjNum].object;
+            if (!pageObj || !pageObj->dictValue.count("Contents")) continue;
+
             auto contentsObj = parser.resolveObject(pageObj->dictValue["Contents"]);
             if (!contentsObj) continue;
 
-            double pageHeight = parser.pages[red.pageIndex].height;
-            double pdfY = pageHeight - red.y - red.height; // convert top-left to PDF bottom-left
+            double pageHeight = parser.pages[pageIndex].height;
 
-            std::vector<uint8_t> uncompressed = parser.getPageContentStream(red.pageIndex);
-            std::string contentStr(uncompressed.begin(), uncompressed.end());
+            // 1. Get raw decompressed content stream
+            std::vector<uint8_t> uncompressed = parser.getPageContentStream(pageIndex);
 
-            // Append solid redaction box stream commands
-            std::ostringstream redactionCmd;
-            redactionCmd << "\n% --- PERMANENT REDACTION APPLIED BY PDF-STUDIO ENGINE ---\n";
-            redactionCmd << "q\n";
-            redactionCmd << red.r << " " << red.g << " " << red.b << " rg\n"; // Fill color
-            redactionCmd << red.r << " " << red.g << " " << red.b << " RG\n"; // Stroke color
-            redactionCmd << red.x << " " << pdfY << " " << red.width << " " << red.height << " re f\n";
+            // 2. Perform True Physical Stream Sanitization (C++ Token/Glyph purge)
+            SanitizeResult sRes = ContentStreamSanitizer::sanitizeStream(uncompressed, pageReds, pageHeight, keywords);
+            res.purgedBlocks += sRes.purgedBlocks;
+            res.purgedChars += sRes.purgedChars;
 
-            if (!red.overlayText.empty()) {
-                redactionCmd << "BT\n";
-                redactionCmd << "/Helvetica-Bold 10 Tf\n";
-                redactionCmd << "1 1 1 rg\n"; // White text
-                redactionCmd << (red.x + 5) << " " << (pdfY + red.height / 2 - 4) << " Td\n";
-                redactionCmd << "(" << red.overlayText << ") Tj\n";
-                redactionCmd << "ET\n";
+            std::string sanitizedContentStr = sRes.sanitizedStream;
+
+            // 3. Append solid opaque visual redaction boxes and labels
+            std::ostringstream visualCmd;
+            visualCmd << "\n% --- PERMANENT VISUAL REDACTION MASK (STREAM PURGED) ---\n";
+            for (const auto& red : pageReds) {
+                double pdfY = pageHeight - red.y - red.height; // convert top-left to PDF bottom-left
+                visualCmd << "q\n";
+                visualCmd << red.r << " " << red.g << " " << red.b << " rg\n"; // Fill color
+                visualCmd << red.r << " " << red.g << " " << red.b << " RG\n"; // Stroke color
+                visualCmd << red.x << " " << pdfY << " " << red.width << " " << red.height << " re f\n";
+
+                if (!red.overlayText.empty()) {
+                    visualCmd << "BT\n";
+                    visualCmd << "/Helvetica-Bold 9 Tf\n";
+                    visualCmd << "1 1 1 rg\n"; // White text
+                    visualCmd << (red.x + 4) << " " << (pdfY + red.height / 2 - 3) << " Td\n";
+                    visualCmd << "(" << escapePdfString(red.overlayText) << ") Tj\n";
+                    visualCmd << "ET\n";
+                }
+                visualCmd << "Q\n";
             }
-            redactionCmd << "Q\n";
 
-            contentStr += redactionCmd.str();
-            contentsObj->streamData.assign(contentStr.begin(), contentStr.end());
+            sanitizedContentStr += visualCmd.str();
+
+            // 4. Update stream object
+            contentsObj->streamData.assign(sanitizedContentStr.begin(), sanitizedContentStr.end());
             contentsObj->dictValue["Filter"] = Object::createName("FlateDecode");
         }
 
-        return Writer::writePdf(outputPath, parser.objects, parser.catalog);
+        // 5. Scrub global XMP Metadata
+        if (parser.catalog && parser.catalog->dictValue.count("Metadata")) {
+            parser.catalog->dictValue.erase("Metadata");
+            res.metadataScrubbed = true;
+        }
+
+        // 6. Scrub Info dictionary
+        for (auto& p : parser.objects) {
+            auto obj = p.second.object;
+            if (obj && obj->type == ObjectType::Dictionary) {
+                if (obj->dictValue.count("Title") || obj->dictValue.count("Author") || obj->dictValue.count("Subject")) {
+                    for (const auto& kw : keywords) {
+                        if (!kw.empty()) {
+                            for (const auto& field : {"Title", "Author", "Subject", "Keywords"}) {
+                                if (obj->dictValue.count(field)) {
+                                    auto strObj = obj->dictValue[field];
+                                    if (strObj && strObj->strValue.find(kw) != std::string::npos) {
+                                        strObj->strValue = "[REDIGIDO]";
+                                        res.metadataScrubbed = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        res.success = Writer::writePdf(outputPath, parser.objects, parser.catalog);
+        return res;
     }
 
     static bool applyAnnotations(Parser& parser, const std::vector<AnnotationOp>& annots, const std::string& outputPath) {
@@ -205,6 +281,185 @@ public:
         parser.pages[pageIndex].rotation = newRot;
 
         return Writer::writePdf(outputPath, parser.objects, parser.catalog);
+    }
+
+    static void markReachable(ObjectPtr obj, std::set<int>& visited, Parser& parser) {
+        if (!obj) return;
+        if (obj->type == ObjectType::Reference) {
+            int num = obj->refValue.objNum;
+            if (num > 0 && !visited.count(num)) {
+                visited.insert(num);
+                if (parser.objects.count(num)) {
+                    markReachable(parser.objects[num].object, visited, parser);
+                }
+            }
+            return;
+        }
+        if (obj->type == ObjectType::Dictionary || obj->type == ObjectType::Stream) {
+            for (const auto& pair : obj->dictValue) {
+                markReachable(pair.second, visited, parser);
+            }
+            return;
+        }
+        if (obj->type == ObjectType::Array) {
+            for (const auto& item : obj->arrayValue) {
+                markReachable(item, visited, parser);
+            }
+            return;
+        }
+    }
+
+    static OptimizationResult optimizePdf(
+        Parser& parser,
+        const std::string& outputPath,
+        const std::string& profile = "balanced"
+    ) {
+        OptimizationResult res;
+        res.profile = profile;
+
+        size_t origSize = parser.buffer.size();
+        res.originalBytes = origSize;
+
+        // 1. Profile-based pre-cleaning (Extreme / Balanced metadata stripping)
+        if (profile == "extreme") {
+            if (parser.catalog) {
+                if (parser.catalog->dictValue.count("Metadata")) parser.catalog->dictValue.erase("Metadata");
+                if (parser.catalog->dictValue.count("PieceInfo")) parser.catalog->dictValue.erase("PieceInfo");
+                if (parser.catalog->dictValue.count("StructTreeRoot")) parser.catalog->dictValue.erase("StructTreeRoot");
+                if (parser.catalog->dictValue.count("OCProperties")) parser.catalog->dictValue.erase("OCProperties");
+            }
+            for (auto& page : parser.pages) {
+                if (parser.objects.count(page.objNum)) {
+                    auto pObj = parser.objects[page.objNum].object;
+                    if (pObj) {
+                        if (pObj->dictValue.count("Metadata")) pObj->dictValue.erase("Metadata");
+                        if (pObj->dictValue.count("PieceInfo")) pObj->dictValue.erase("PieceInfo");
+                        if (pObj->dictValue.count("Thumb")) pObj->dictValue.erase("Thumb");
+                    }
+                }
+            }
+        } else if (profile == "balanced") {
+            if (parser.catalog) {
+                if (parser.catalog->dictValue.count("PieceInfo")) parser.catalog->dictValue.erase("PieceInfo");
+            }
+            for (auto& page : parser.pages) {
+                if (parser.objects.count(page.objNum)) {
+                    auto pObj = parser.objects[page.objNum].object;
+                    if (pObj) {
+                        if (pObj->dictValue.count("PieceInfo")) pObj->dictValue.erase("PieceInfo");
+                        if (pObj->dictValue.count("Thumb")) pObj->dictValue.erase("Thumb");
+                    }
+                }
+            }
+        }
+
+        // 2. Mark & Sweep Garbage Collection for Cos Objects
+        std::set<int> reachable;
+        
+        // Find catalog object number
+        int catalogObjNum = 0;
+        for (const auto& pair : parser.objects) {
+            if (pair.second.object == parser.catalog) {
+                catalogObjNum = pair.first;
+                break;
+            }
+        }
+        if (catalogObjNum > 0) {
+            reachable.insert(catalogObjNum);
+        }
+        if (parser.catalog) {
+            markReachable(parser.catalog, reachable, parser);
+        }
+
+        // Ensure all registered pages and trailer are marked
+        if (parser.trailer) {
+            markReachable(parser.trailer, reachable, parser);
+        }
+        for (const auto& p : parser.pages) {
+            if (p.objNum > 0) {
+                reachable.insert(p.objNum);
+                if (parser.objects.count(p.objNum)) {
+                    markReachable(parser.objects[p.objNum].object, reachable, parser);
+                }
+            }
+        }
+
+        // Purge unreachable / orphaned objects
+        int removedCount = 0;
+        for (auto it = parser.objects.begin(); it != parser.objects.end(); ) {
+            if (!reachable.count(it->first)) {
+                it = parser.objects.erase(it);
+                removedCount++;
+            } else {
+                ++it;
+            }
+        }
+        res.removedObjects = removedCount;
+
+        // 3. Stream Recompression & Normalization
+        int recompressedCount = 0;
+        for (auto& pair : parser.objects) {
+            auto obj = pair.second.object;
+            if (!obj || obj->type != ObjectType::Stream) continue;
+
+            bool isFlate = false;
+            if (obj->dictValue.count("Filter")) {
+                auto filter = obj->dictValue["Filter"];
+                if (filter->type == ObjectType::Name && 
+                    (filter->strValue == "FlateDecode" || filter->strValue == "/FlateDecode")) {
+                    isFlate = true;
+                }
+            }
+
+            if (isFlate) {
+                std::vector<uint8_t> uncompressed;
+                if (Flate::decompress(obj->streamData, uncompressed)) {
+                    std::vector<uint8_t> recompressed;
+                    if (Flate::compress(uncompressed, recompressed)) {
+                        if (recompressed.size() < obj->streamData.size()) {
+                            obj->streamData = std::move(recompressed);
+                            obj->dictValue["Length"] = Object::createNumber((double)obj->streamData.size());
+                            recompressedCount++;
+                        }
+                    }
+                }
+            } else if (!obj->dictValue.count("Filter") && !obj->streamData.empty()) {
+                // Compress uncompressed raw stream
+                std::vector<uint8_t> compressed;
+                if (Flate::compress(obj->streamData, compressed)) {
+                    if (compressed.size() < obj->streamData.size()) {
+                        obj->streamData = std::move(compressed);
+                        obj->dictValue["Filter"] = Object::createName("FlateDecode");
+                        obj->dictValue["Length"] = Object::createNumber((double)obj->streamData.size());
+                        recompressedCount++;
+                    }
+                }
+            }
+        }
+        res.recompressedStreams = recompressedCount;
+
+        // 4. Write optimized output
+        bool ok = Writer::writePdf(outputPath, parser.objects, parser.catalog);
+        if (!ok) {
+            res.success = false;
+            return res;
+        }
+
+        std::ifstream check(outputPath, std::ios::binary | std::ios::ate);
+        if (check.is_open()) {
+            res.optimizedBytes = (size_t)check.tellg();
+        } else {
+            res.optimizedBytes = origSize;
+        }
+
+        res.success = true;
+        if (res.originalBytes > 0 && res.originalBytes >= res.optimizedBytes) {
+            res.reductionPercent = (1.0 - (double)res.optimizedBytes / (double)res.originalBytes) * 100.0;
+        } else {
+            res.reductionPercent = 0.0;
+        }
+
+        return res;
     }
 };
 

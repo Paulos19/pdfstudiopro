@@ -1,0 +1,19 @@
+# WebAssembly Multi-stage Build for PDF Studio Pro
+FROM emscripten/emsdk:latest AS wasm-builder
+
+WORKDIR /build
+COPY src/native/ ./src/native/
+
+RUN mkdir -p /build/out && \
+    emcc src/native/wasm_entry.cpp src/native/miniz.c src/native/miniz_tdef.c src/native/miniz_tinfl.c \
+        -I src/native \
+        -O3 -std=c++17 \
+        -s WASM=1 \
+        -s ALLOW_MEMORY_GROWTH=1 \
+        -s EXPORTED_RUNTIME_METHODS="['ccall','cwrap','getValue','setValue','UTF8ToString','stringToUTF8','_malloc','_free']" \
+        -s EXPORTED_FUNCTIONS="['_wasm_get_version','_wasm_inspect_pdf','_wasm_compress_pdf','_wasm_redact_pdf','_wasm_rotate_page','_wasm_free_buffer','_wasm_free_string','_malloc','_free']" \
+        -s MODULARIZE=1 \
+        -s EXPORT_NAME="PdfEngineWasmModule" \
+        -o /build/out/pdf_engine.js
+
+CMD ["cp", "-r", "/build/out/.", "/output/"]

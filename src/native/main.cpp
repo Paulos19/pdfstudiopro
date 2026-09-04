@@ -8,6 +8,19 @@
 #include <fstream>
 #include <sstream>
 
+static std::string escapeJson(const std::string& s) {
+    std::string out;
+    for (char c : s) {
+        if (c == '\\') out += "\\\\";
+        else if (c == '"') out += "\\\"";
+        else if (c == '\n') out += "\\n";
+        else if (c == '\r') out += "\\r";
+        else if (c == '\t') out += "\\t";
+        else out += c;
+    }
+    return out;
+}
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         std::cout << "{\"error\": \"Invalid arguments. Usage: pdf_engine <command> [args]\"}\n";
@@ -24,7 +37,7 @@ int main(int argc, char* argv[]) {
         std::string type = argv[2];
         std::string outPath = argv[3];
         bool ok = pdf::SampleGenerator::generateSample(type, outPath);
-        std::cout << "{\"success\":" << (ok ? "true" : "false") << ",\"output\":\"" << outPath << "\"}\n";
+        std::cout << "{\"success\":" << (ok ? "true" : "false") << ",\"output\":\"" << escapeJson(outPath) << "\"}\n";
         return ok ? 0 : 1;
     }
 
@@ -113,7 +126,7 @@ int main(int argc, char* argv[]) {
         edits.push_back(op);
 
         bool ok = pdf::EditorCore::applyTextEdits(parser, edits, outputPath);
-        std::cout << "{\"success\":" << (ok ? "true" : "false") << ",\"output\":\"" << outputPath << "\"}\n";
+        std::cout << "{\"success\":" << (ok ? "true" : "false") << ",\"output\":\"" << escapeJson(outputPath) << "\"}\n";
         return ok ? 0 : 1;
     }
 
@@ -131,6 +144,10 @@ int main(int argc, char* argv[]) {
         double w = std::atof(argv[7]);
         double h = std::atof(argv[8]);
         std::string overlayText = argc > 9 ? argv[9] : "[CENSURADO / REDACTED]";
+        std::vector<std::string> keywords;
+        if (argc > 10) {
+            keywords.push_back(argv[10]);
+        }
 
         pdf::Parser parser;
         if (!parser.loadFromFile(inputPath)) {
@@ -146,9 +163,13 @@ int main(int argc, char* argv[]) {
         box.r = 0.0; box.g = 0.0; box.b = 0.0; // Black box
         redactions.push_back(box);
 
-        bool ok = pdf::EditorCore::applyRedactions(parser, redactions, outputPath);
-        std::cout << "{\"success\":" << (ok ? "true" : "false") << ",\"output\":\"" << outputPath << "\"}\n";
-        return ok ? 0 : 1;
+        auto res = pdf::EditorCore::applyRedactions(parser, redactions, outputPath, keywords);
+        std::cout << "{\"success\":" << (res.success ? "true" : "false")
+                  << ",\"purgedChars\":" << res.purgedChars
+                  << ",\"purgedBlocks\":" << res.purgedBlocks
+                  << ",\"metadataScrubbed\":" << (res.metadataScrubbed ? "true" : "false")
+                  << ",\"output\":\"" << escapeJson(outputPath) << "\"}\n";
+        return res.success ? 0 : 1;
     }
 
     if (cmd == "--annotate") {
@@ -190,7 +211,7 @@ int main(int argc, char* argv[]) {
         annots.push_back(ann);
 
         bool ok = pdf::EditorCore::applyAnnotations(parser, annots, outputPath);
-        std::cout << "{\"success\":" << (ok ? "true" : "false") << ",\"output\":\"" << outputPath << "\"}\n";
+        std::cout << "{\"success\":" << (ok ? "true" : "false") << ",\"output\":\"" << escapeJson(outputPath) << "\"}\n";
         return ok ? 0 : 1;
     }
 
@@ -211,8 +232,37 @@ int main(int argc, char* argv[]) {
         }
 
         bool ok = pdf::EditorCore::rotatePage(parser, pageIndex, angle, outputPath);
-        std::cout << "{\"success\":" << (ok ? "true" : "false") << ",\"output\":\"" << outputPath << "\"}\n";
+        std::cout << "{\"success\":" << (ok ? "true" : "false") << ",\"output\":\"" << escapeJson(outputPath) << "\"}\n";
         return ok ? 0 : 1;
+    }
+
+    if (cmd == "--compress") {
+        // Usage: --compress <input_path> <output_path> [profile]
+        if (argc < 4) {
+            std::cout << "{\"error\": \"Usage: --compress <input_path> <output_path> [profile]\"}\n";
+            return 1;
+        }
+        std::string inputPath = argv[2];
+        std::string outputPath = argv[3];
+        std::string profile = argc > 4 ? argv[4] : "balanced";
+
+        pdf::Parser parser;
+        if (!parser.loadFromFile(inputPath)) {
+            std::cout << "{\"error\": \"Failed to parse input PDF: " << escapeJson(inputPath) << "\"}\n";
+            return 1;
+        }
+
+        auto res = pdf::EditorCore::optimizePdf(parser, outputPath, profile);
+        std::cout << "{\"success\":" << (res.success ? "true" : "false")
+                  << ",\"originalSize\":" << res.originalBytes
+                  << ",\"compressedSize\":" << res.optimizedBytes
+                  << ",\"bytesSaved\":" << (res.originalBytes > res.optimizedBytes ? (res.originalBytes - res.optimizedBytes) : 0)
+                  << ",\"ratio\":" << (res.reductionPercent > 0.0 ? res.reductionPercent : 0.0)
+                  << ",\"removedObjects\":" << res.removedObjects
+                  << ",\"recompressedStreams\":" << res.recompressedStreams
+                  << ",\"profile\":\"" << escapeJson(profile) << "\""
+                  << ",\"output\":\"" << escapeJson(outputPath) << "\"}\n";
+        return res.success ? 0 : 1;
     }
 
     std::cout << "{\"error\": \"Unknown command: " << cmd << "\"}\n";

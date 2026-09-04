@@ -22,7 +22,8 @@ class Redactor {
             y: block.y - 2,
             width: block.width + 4,
             height: block.height + 4,
-            overlayText: '[CONFIDENCIAL / REDIGIDO]'
+            overlayText: '[CONFIDENCIAL / REDIGIDO]',
+            keyword: block.text || ''
         });
 
         // Visually mark the element
@@ -42,9 +43,10 @@ class Redactor {
     async applyPermanentRedaction() {
         if (this.pendingRedactions.length === 0 || !window.App.currentDocId) return;
 
-        window.App.showToast('Aplicando expurgo definitivo de dados via C++...', 'info');
+        window.App.showToast('Aplicando expurgo definitivo de dados via motor nativo C++...', 'info');
 
         try {
+            let totalCharsPurged = 0;
             for (const red of this.pendingRedactions) {
                 const resp = await fetch(`/api/document/${window.App.currentDocId}/redact`, {
                     method: 'POST',
@@ -53,9 +55,15 @@ class Redactor {
                 });
                 const result = await resp.json();
                 if (!result.success) throw new Error(result.error);
+                if (result.nativePurge && result.nativePurge.purgedChars) {
+                    totalCharsPurged += result.nativePurge.purgedChars;
+                }
             }
 
-            window.App.showToast('Redação permanente concluída! Dados excluídos do PDF.', 'success');
+            const msg = totalCharsPurged > 0
+                ? `Expurgo C++ concluído! ${totalCharsPurged} caracteres confidenciais destruídos permanentemente.`
+                : 'Redação permanente concluída com motor C++! Dados expurgados do PDF.';
+            window.App.showToast(msg, 'success');
             this.cancelPending();
             window.App.reloadCurrentDocument();
         } catch (err) {

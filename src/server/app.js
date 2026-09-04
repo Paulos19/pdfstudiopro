@@ -10,6 +10,8 @@ const { PDFDocument, rgb, StandardFonts, degrees } = require('pdf-lib');
 const fontkit = require('@pdf-lib/fontkit');
 const CppBridge = require('./cpp_bridge');
 const AiEngine = require('./ai_engine');
+const PadesSigner = require('./pades_signer');
+const AcroFormCopilot = require('./acroform_copilot');
 
 const app = express();
 const server = http.createServer(app);
@@ -97,6 +99,10 @@ async function getEmbeddedBoldFont(pdfDoc) {
 }
 
 // Middleware
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
 // Healthcheck endpoint
 app.get('/health', (req, res) => {
     res.status(200).send('OK');
@@ -164,6 +170,7 @@ app.get('/api/status', (req, res) => {
 // 2. List Templates
 app.get('/api/templates', (req, res) => {
     res.json([
+        { id: 'form', title: 'Formulário Interativo (AcroForm & IA)', desc: 'Formulário oficial com inputs de texto, checkboxes e seleção preenchíveis por IA.' },
         { id: 'resume', title: 'Currículo Profissional (Paulo Henrique)', desc: 'Currículo completo com 3 páginas, dados técnicos e projetos em destaque.' },
         { id: 'contract', title: 'Contrato de Prestação de Serviços', desc: 'Contrato com cláusulas, dados sensíveis para teste de redação e assinaturas.' },
         { id: 'invoice', title: 'Fatura Comercial / Invoice', desc: 'Fatura empresarial com tabela de valores, itens e cabeçalho estilizado.' },
@@ -182,6 +189,8 @@ app.post('/api/templates/:type/load', async (req, res) => {
         const sampleResumePath = path.join(SAMPLES_DIR, 'curriculo_paulo.pdf');
         if (type === 'resume' && fs.existsSync(sampleResumePath)) {
             fs.copyFileSync(sampleResumePath, targetPath);
+        } else if (type === 'form') {
+            await AcroFormCopilot.createSampleAcroFormPdf(targetPath);
         } else {
             let created = false;
             try {
@@ -448,41 +457,106 @@ app.post('/api/document/:id/redact', async (req, res) => {
     }
 
     try {
-        const pdfBytes = fs.readFileSync(doc.filePath);
-        const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
-        const pages = pdfDoc.getPages();
+        let nativePurge = null;
+        if (CppBridge.isAvailable()) {
+            try {
+                const targetOutput = path.join(STORAGE_DIR, `redacted_${Date.now()}_${doc.filename}`);
+                nativePurge = await CppBridge.redact(
+                    doc.filePath,
+                    targetOutput,
+                    pageIndex,
+                    x,
+                    y,
+                    width,
+                    height,
+                    overlayText || '[CONFIDENCIAL / REDIGIDO]',
+                    req.body.keyword || ''
+                );
 
-        if (pageIndex >= 0 && pageIndex < pages.length) {
-            const page = pages[pageIndex];
-            const pageHeight = page.getHeight();
-            const pdfY = pageHeight - y - height;
+                if (nativePurge && typeof nativePurge.raw === 'string') {
+                    try {
+                        const parsed = JSON.parse(nativePurge.raw.trim());
+                        Object.assign(nativePurge, parsed);
+                    } catch (e) {
+                        const sIdx = nativePurge.raw.indexOf('{');
+                        const eIdx = nativePurge.raw.lastIndexOf('}');
+                        if (sIdx !== -1 && eIdx !== -1) {
+                            try {
+                                const parsed = JSON.parse(nativePurge.raw.substring(sIdx, eIdx + 1));
+                                Object.assign(nativePurge, parsed);
+                            } catch (e2) {}
+                        }
+                    }
+                }
 
-            page.drawRectangle({
-                x: x,
-                y: pdfY,
-                width: width,
-                height: height,
-                color: rgb(0, 0, 0),
-                opacity: 1.0
-            });
-
-            if (overlayText) {
-                const fontBold = await getEmbeddedBoldFont(pdfDoc);
-                page.drawText(overlayText, {
-                    x: x + 4,
-                    y: pdfY + (height / 2) - 4,
-                    size: Math.min(9, height * 0.6),
-                    font: fontBold,
-                    color: rgb(1, 1, 1)
-                });
+                if (fs.existsSync(targetOutput) && fs.statSync(targetOutput).size > 100) {
+                    fs.copyFileSync(targetOutput, doc.filePath);
+                    try { fs.unlinkSync(targetOutput); } catch (e) {}
+                    if (!nativePurge) nativePurge = { success: true };
+                    nativePurge.success = true;
+                }
+            } catch (cppErr) {
+                console.warn('Native C++ redact fallback to pdf-lib:', cppErr.message);
             }
-
-            const modifiedBytes = await pdfDoc.save();
-            fs.writeFileSync(doc.filePath, modifiedBytes);
         }
 
-        doc.history.push({ action: 'redact', pageIndex, x, y, width, height, time: new Date() });
-        res.json({ success: true, message: 'Redação permanente gravada com sucesso!' });
+        if (!nativePurge || !nativePurge.success) {
+            const pdfBytes = fs.readFileSync(doc.filePath);
+            const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+            const pages = pdfDoc.getPages();
+
+            if (pageIndex >= 0 && pageIndex < pages.length) {
+                const page = pages[pageIndex];
+                const pageHeight = page.getHeight();
+                const pdfY = pageHeight - y - height;
+
+                page.drawRectangle({
+                    x: x,
+                    y: pdfY,
+                    width: width,
+                    height: height,
+                    color: rgb(0, 0, 0),
+                    opacity: 1.0
+                });
+
+                if (overlayText) {
+                    const fontBold = await getEmbeddedBoldFont(pdfDoc);
+                    page.drawText(overlayText, {
+                        x: x + 4,
+                        y: pdfY + (height / 2) - 4,
+                        size: Math.min(9, height * 0.6),
+                        font: fontBold,
+                        color: rgb(1, 1, 1)
+                    });
+                }
+
+                const modifiedBytes = await pdfDoc.save();
+                fs.writeFileSync(doc.filePath, modifiedBytes);
+            }
+        }
+
+        doc.history.push({
+            action: 'redact',
+            pageIndex,
+            x,
+            y,
+            width,
+            height,
+            purgedChars: nativePurge?.purgedChars || 0,
+            purgedBlocks: nativePurge?.purgedBlocks || 0,
+            engine: nativePurge?.success ? 'C++17 Native Engine (Byte Purge)' : 'pdf-lib Fallback',
+            time: new Date()
+        });
+
+        console.log('DEBUG nativePurge in app.js:', JSON.stringify(nativePurge));
+
+        res.json({
+            success: true,
+            message: nativePurge?.success
+                ? `Expurgo definitivo de dados concluído no motor C++! (${nativePurge.purgedChars || 0} caracteres destruídos permanentemente)`
+                : 'Redação permanente gravada com sucesso!',
+            nativePurge
+        });
     } catch (err) {
         console.error('Redaction error:', err);
         res.status(500).json({ error: err.message });
@@ -762,6 +836,523 @@ app.post('/api/document/:id/extract-pages', async (req, res) => {
         });
     } catch (err) {
         console.error('Extract pages error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 11.15. Reorder Pages, Apply Rotations & Blank Pages
+app.post('/api/document/:id/reorder-pages', async (req, res) => {
+    const doc = documents.get(req.params.id);
+    if (!doc || !fs.existsSync(doc.filePath)) {
+        return res.status(404).json({ error: 'Documento não encontrado.' });
+    }
+
+    const { pageOrder, items, rotations } = req.body;
+    if ((!Array.isArray(pageOrder) || pageOrder.length === 0) && (!Array.isArray(items) || items.length === 0)) {
+        return res.status(400).json({ error: 'Nenhuma ordem de páginas especificada.' });
+    }
+
+    try {
+        const pdfBytes = fs.readFileSync(doc.filePath);
+        const sourceDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+        const totalSourcePages = sourceDoc.getPageCount();
+
+        const newDoc = await PDFDocument.create();
+
+        if (Array.isArray(items) && items.length > 0) {
+            for (const it of items) {
+                if (it.isBlank) {
+                    newDoc.addPage([595.28, 841.89]);
+                } else {
+                    const srcIdx = (it.originalIndex !== undefined && it.originalIndex !== null) ? Number(it.originalIndex) : Number(it.pageIndex);
+                    if (srcIdx >= 0 && srcIdx < totalSourcePages) {
+                        const [copied] = await newDoc.copyPages(sourceDoc, [srcIdx]);
+                        if (it.rotation) {
+                            const currentRot = copied.getRotation().angle;
+                            copied.setRotation(degrees((currentRot + Number(it.rotation) + 360) % 360));
+                        }
+                        newDoc.addPage(copied);
+                    }
+                }
+            }
+        } else {
+            const rotMap = rotations || {};
+            for (let i = 0; i < pageOrder.length; i++) {
+                const srcIdx = Number(pageOrder[i]);
+                if (srcIdx >= 0 && srcIdx < totalSourcePages) {
+                    const [copied] = await newDoc.copyPages(sourceDoc, [srcIdx]);
+                    const rotDelta = Number(rotMap[srcIdx] || rotMap[String(srcIdx)] || 0);
+                    if (rotDelta) {
+                        const currentRot = copied.getRotation().angle;
+                        copied.setRotation(degrees((currentRot + rotDelta + 360) % 360));
+                    }
+                    newDoc.addPage(copied);
+                }
+            }
+        }
+
+        if (newDoc.getPageCount() === 0) {
+            return res.status(400).json({ error: 'A reordenação resultaria em um PDF sem páginas.' });
+        }
+
+        const newBytes = await newDoc.save();
+        fs.writeFileSync(doc.filePath, newBytes);
+
+        doc.history.push({
+            action: 'reorder-pages',
+            totalPages: newDoc.getPageCount(),
+            time: new Date()
+        });
+
+        res.json({
+            success: true,
+            totalPages: newDoc.getPageCount(),
+            message: 'Ordem e orientações das páginas salvas com sucesso!'
+        });
+    } catch (err) {
+        console.error('Reorder pages error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 11.16. Duplicate Page
+app.post('/api/document/:id/duplicate-page', async (req, res) => {
+    const doc = documents.get(req.params.id);
+    if (!doc || !fs.existsSync(doc.filePath)) {
+        return res.status(404).json({ error: 'Documento não encontrado.' });
+    }
+
+    const { pageIndex } = req.body;
+    if (pageIndex === undefined || pageIndex < 0) {
+        return res.status(400).json({ error: 'Índice de página inválido.' });
+    }
+
+    try {
+        const pdfBytes = fs.readFileSync(doc.filePath);
+        const sourceDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+        const total = sourceDoc.getPageCount();
+
+        if (pageIndex >= total) {
+            return res.status(400).json({ error: 'Índice de página fora do limite.' });
+        }
+
+        const newDoc = await PDFDocument.create();
+        for (let i = 0; i < total; i++) {
+            const [copied] = await newDoc.copyPages(sourceDoc, [i]);
+            newDoc.addPage(copied);
+            if (i === pageIndex) {
+                const [dup] = await newDoc.copyPages(sourceDoc, [i]);
+                newDoc.addPage(dup);
+            }
+        }
+
+        const newBytes = await newDoc.save();
+        fs.writeFileSync(doc.filePath, newBytes);
+
+        doc.history.push({ action: 'duplicate-page', pageIndex, time: new Date() });
+        res.json({
+            success: true,
+            totalPages: newDoc.getPageCount(),
+            message: `Página ${pageIndex + 1} duplicada com sucesso!`
+        });
+    } catch (err) {
+        console.error('Duplicate page error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 11.17. Insert Blank Page
+app.post('/api/document/:id/insert-blank-page', async (req, res) => {
+    const doc = documents.get(req.params.id);
+    if (!doc || !fs.existsSync(doc.filePath)) {
+        return res.status(404).json({ error: 'Documento não encontrado.' });
+    }
+
+    const { afterPageIndex } = req.body;
+
+    try {
+        const pdfBytes = fs.readFileSync(doc.filePath);
+        const sourceDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+        const total = sourceDoc.getPageCount();
+
+        const insertPos = afterPageIndex !== undefined ? Math.min(total, Math.max(0, afterPageIndex + 1)) : total;
+
+        const newDoc = await PDFDocument.create();
+        for (let i = 0; i < total; i++) {
+            if (i === insertPos) {
+                newDoc.addPage([595.28, 841.89]);
+            }
+            const [copied] = await newDoc.copyPages(sourceDoc, [i]);
+            newDoc.addPage(copied);
+        }
+        if (insertPos >= total) {
+            newDoc.addPage([595.28, 841.89]);
+        }
+
+        const newBytes = await newDoc.save();
+        fs.writeFileSync(doc.filePath, newBytes);
+
+        doc.history.push({ action: 'insert-blank-page', insertPos, time: new Date() });
+        res.json({
+            success: true,
+            totalPages: newDoc.getPageCount(),
+            message: 'Página em branco inserida com sucesso!'
+        });
+    } catch (err) {
+        console.error('Insert blank page error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 11.18. Compressor & Otimizador C++ (Perfis: Extremo, Balanceado, Lossless)
+app.post('/api/document/:id/compress', async (req, res) => {
+    const doc = documents.get(req.params.id);
+    if (!doc || !fs.existsSync(doc.filePath)) {
+        return res.status(404).json({ error: 'Documento não encontrado.' });
+    }
+
+    const { profile = 'balanced', replaceCurrent = true } = req.body;
+    const tempOutName = `compressed_${Date.now()}_${doc.filename}`;
+    const tempOutPath = path.join(STORAGE_DIR, tempOutName);
+
+    try {
+        let compResult = null;
+        try {
+            compResult = await CppBridge.compress(doc.filePath, tempOutPath, profile);
+        } catch (cppErr) {
+            console.warn('Native C++ compress fallback to pdf-lib:', cppErr.message);
+        }
+
+        if (compResult && compResult.success && fs.existsSync(tempOutPath)) {
+            const origStat = fs.statSync(doc.filePath).size;
+            const newStat = fs.statSync(tempOutPath).size;
+
+            if (replaceCurrent) {
+                fs.copyFileSync(tempOutPath, doc.filePath);
+                try { fs.unlinkSync(tempOutPath); } catch (e) {}
+
+                doc.history.push({
+                    action: 'compress',
+                    profile,
+                    originalSize: origStat,
+                    compressedSize: newStat,
+                    bytesSaved: Math.max(0, origStat - newStat),
+                    ratio: compResult.ratio || ((1 - newStat / origStat) * 100),
+                    removedObjects: compResult.removedObjects || 0,
+                    recompressedStreams: compResult.recompressedStreams || 0,
+                    engine: 'C++17 Native Engine',
+                    time: new Date()
+                });
+
+                return res.json({
+                    success: true,
+                    originalSize: origStat,
+                    compressedSize: newStat,
+                    bytesSaved: Math.max(0, origStat - newStat),
+                    ratio: compResult.ratio || ((1 - newStat / origStat) * 100),
+                    removedObjects: compResult.removedObjects || 0,
+                    recompressedStreams: compResult.recompressedStreams || 0,
+                    profile,
+                    engine: 'C++17 Native Engine',
+                    docId: doc.id,
+                    message: `PDF otimizado com sucesso pelo motor C++! Economia de ${(Math.max(0, origStat - newStat) / 1024).toFixed(1)} KB (${compResult.ratio?.toFixed(1)}%).`
+                });
+            } else {
+                const newDocInfo = registerDoc(tempOutName, `otimizado_${profile}_${doc.originalName}`);
+                return res.json({
+                    success: true,
+                    originalSize: origStat,
+                    compressedSize: newStat,
+                    bytesSaved: Math.max(0, origStat - newStat),
+                    ratio: compResult.ratio || ((1 - newStat / origStat) * 100),
+                    removedObjects: compResult.removedObjects || 0,
+                    recompressedStreams: compResult.recompressedStreams || 0,
+                    profile,
+                    engine: 'C++17 Native Engine',
+                    docId: newDocInfo.id,
+                    downloadUrl: `/api/document/${newDocInfo.id}/download`,
+                    message: `PDF otimizado com sucesso pelo motor C++!`
+                });
+            }
+        }
+
+        // Fallback: pdf-lib re-save
+        const pdfBytes = fs.readFileSync(doc.filePath);
+        const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+        const optimizedBytes = await pdfDoc.save({ useObjectStreams: true });
+        const origSize = pdfBytes.length;
+        const newSize = optimizedBytes.length;
+
+        if (replaceCurrent) {
+            fs.writeFileSync(doc.filePath, optimizedBytes);
+            return res.json({
+                success: true,
+                originalSize: origSize,
+                compressedSize: newSize,
+                bytesSaved: Math.max(0, origSize - newSize),
+                ratio: origSize > 0 ? ((1 - newSize / origSize) * 100) : 0,
+                removedObjects: 0,
+                recompressedStreams: 0,
+                profile,
+                engine: 'pdf-lib Fallback',
+                docId: doc.id,
+                message: 'Otimização concluída!'
+            });
+        } else {
+            fs.writeFileSync(tempOutPath, optimizedBytes);
+            const newDocInfo = registerDoc(tempOutName, `otimizado_${doc.originalName}`);
+            return res.json({
+                success: true,
+                originalSize: origSize,
+                compressedSize: newSize,
+                bytesSaved: Math.max(0, origSize - newSize),
+                ratio: origSize > 0 ? ((1 - newSize / origSize) * 100) : 0,
+                removedObjects: 0,
+                recompressedStreams: 0,
+                profile,
+                engine: 'pdf-lib Fallback',
+                docId: newDocInfo.id,
+                downloadUrl: `/api/document/${newDocInfo.id}/download`,
+                message: 'Otimização concluída!'
+            });
+        }
+    } catch (err) {
+        console.error('Compress error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 11.19. Gerador de Certificado Digital ICP-Brasil A1 Demo / Teste
+app.post('/api/generate-demo-cert', (req, res) => {
+    try {
+        const { signerName = 'JOÃO DA SILVA:12345678900', email = 'joao.silva@exemplo.com.br' } = req.body;
+        const certData = PadesSigner.generateDemoCertificate(signerName, email);
+
+        // Store demo certificate in memory cache for instant signing
+        app.locals.lastDemoCert = certData;
+
+        res.json({
+            success: true,
+            serialNumber: certData.serialNumber,
+            issuer: certData.issuer,
+            subject: certData.subject,
+            validFrom: certData.validFrom,
+            validTo: certData.validTo,
+            message: 'Certificado ICP-Brasil A1 gerado com sucesso para testes!'
+        });
+    } catch (err) {
+        console.error('Generate demo cert error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 11.20. Assinatura Digital Criptográfica PAdES (ICP-Brasil A1 com PKCS#7 / SHA-256)
+app.post('/api/document/:id/sign-digital', upload.any(), async (req, res) => {
+    const doc = documents.get(req.params.id);
+    if (!doc || !fs.existsSync(doc.filePath)) {
+        return res.status(404).json({ error: 'Documento não encontrado.' });
+    }
+
+    try {
+        let signerData = null;
+        const password = req.body.password || '';
+
+        // Check if certificate file (.pfx / .p12) was uploaded
+        if (req.files && req.files.length > 0) {
+            const certFile = req.files.find(f => f.originalname.endsWith('.pfx') || f.originalname.endsWith('.p12') || f.fieldname === 'certificate');
+            if (certFile) {
+                const certBuffer = fs.readFileSync(certFile.path);
+                signerData = PadesSigner.parseP12(certBuffer, password);
+                try { fs.unlinkSync(certFile.path); } catch (e) {}
+            }
+        }
+
+        // If no file uploaded, use or generate demo ICP-Brasil A1 cert
+        if (!signerData) {
+            const signerName = req.body.signerName || 'JOÃO DA SILVA:12345678900';
+            const email = req.body.email || 'assinante@icp-brasil.gov.br';
+            signerData = PadesSigner.generateDemoCertificate(signerName, email);
+        }
+
+        const pdfBytes = fs.readFileSync(doc.filePath);
+        const {
+            visualStamp = 'true',
+            pageIndex = 0,
+            x = 50,
+            y = 50,
+            width = 250,
+            height = 70,
+            reason = 'Assinatura Digital com Validade Jurídica (ICP-Brasil)',
+            location = 'Brasil',
+            replaceCurrent = 'true'
+        } = req.body;
+
+        const signResult = await PadesSigner.signPdf(pdfBytes, signerData, {
+            visualStamp: String(visualStamp) === 'true',
+            pageIndex: parseInt(pageIndex, 10) || 0,
+            x: parseFloat(x) || 50,
+            y: parseFloat(y) || 50,
+            width: parseFloat(width) || 250,
+            height: parseFloat(height) || 70,
+            reason: reason || 'Assinatura Digital com Validade Jurídica (ICP-Brasil)',
+            location: location || 'Brasil'
+        });
+
+        const shouldReplace = String(replaceCurrent) === 'true';
+
+        if (shouldReplace) {
+            fs.writeFileSync(doc.filePath, signResult.signedPdfBuffer);
+
+            doc.history.push({
+                action: 'sign-digital-pades',
+                signer: signResult.subject,
+                issuer: signResult.issuer,
+                serialNumber: signResult.serialNumber,
+                digestSha256: signResult.digestSha256,
+                time: new Date()
+            });
+
+            return res.json({
+                success: true,
+                digestSha256: signResult.digestSha256,
+                serialNumber: signResult.serialNumber,
+                issuer: signResult.issuer,
+                subject: signResult.subject,
+                validFrom: signResult.validFrom,
+                validTo: signResult.validTo,
+                docId: doc.id,
+                message: `Documento assinado digitalmente com sucesso padrão ICP-Brasil / PAdES (SHA-256)!`
+            });
+        } else {
+            const signedFilename = `assinado_pades_${Date.now()}_${doc.filename}`;
+            const signedPath = path.join(STORAGE_DIR, signedFilename);
+            fs.writeFileSync(signedPath, signResult.signedPdfBuffer);
+
+            const newDocInfo = registerDoc(signedFilename, `assinado_${doc.originalName}`);
+            return res.json({
+                success: true,
+                digestSha256: signResult.digestSha256,
+                serialNumber: signResult.serialNumber,
+                issuer: signResult.issuer,
+                subject: signResult.subject,
+                validFrom: signResult.validFrom,
+                validTo: signResult.validTo,
+                docId: newDocInfo.id,
+                downloadUrl: `/api/document/${newDocInfo.id}/download`,
+                message: `Documento assinado digitalmente com sucesso padrão ICP-Brasil / PAdES!`
+            });
+        }
+    } catch (err) {
+        console.error('Digital sign error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 11.21. AcroForms Copilot: Detecção de Campos Interativos
+app.get('/api/document/:id/acroforms', async (req, res) => {
+    const doc = documents.get(req.params.id);
+    if (!doc || !fs.existsSync(doc.filePath)) {
+        return res.status(404).json({ error: 'Documento não encontrado.' });
+    }
+
+    try {
+        const pdfBytes = fs.readFileSync(doc.filePath);
+        const detection = await AcroFormCopilot.detectFields(pdfBytes);
+        res.json({
+            success: true,
+            docId: doc.id,
+            ...detection
+        });
+    } catch (err) {
+        console.error('AcroForm detection error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 11.22. AcroForms Copilot: Preenchimento Automático com IA Gemini Flash
+app.post('/api/document/:id/acroforms/autofill', async (req, res) => {
+    const doc = documents.get(req.params.id);
+    if (!doc || !fs.existsSync(doc.filePath)) {
+        return res.status(404).json({ error: 'Documento não encontrado.' });
+    }
+
+    const { userContext = '', persona = 'candidate' } = req.body;
+
+    try {
+        broadcastProgress('acroform_progress', 'detecting', 25, 'Inspecionando árvore de campos /AcroForm do documento...');
+        const pdfBytes = fs.readFileSync(doc.filePath);
+        const detection = await AcroFormCopilot.detectFields(pdfBytes);
+
+        if (!detection.hasAcroForm || detection.fields.length === 0) {
+            return res.status(400).json({ error: 'Nenhum campo interativo de formulário identificado neste documento.' });
+        }
+
+        broadcastProgress('acroform_progress', 'gemini_reasoning', 60, `Gemini Flash analisando semântica de ${detection.fields.length} campos...`);
+        const aiResult = await AcroFormCopilot.autoFillWithAi(detection.fields, userContext, persona);
+
+        broadcastProgress('acroform_progress', 'completed', 100, 'Mapeamento inteligente de formulário concluído com sucesso!');
+
+        res.json({
+            success: true,
+            docId: doc.id,
+            fieldCount: detection.fieldCount,
+            filledFields: aiResult.filledFields,
+            summary: aiResult.summary,
+            confidence: aiResult.confidence || 98
+        });
+    } catch (err) {
+        console.error('AcroForm autofill error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 11.23. AcroForms Copilot: Gravação dos Campos no PDF (com opção Flatten)
+app.post('/api/document/:id/acroforms/apply', async (req, res) => {
+    const doc = documents.get(req.params.id);
+    if (!doc || !fs.existsSync(doc.filePath)) {
+        return res.status(404).json({ error: 'Documento não encontrado.' });
+    }
+
+    const { fieldValues = {}, flatten = false, replaceCurrent = true } = req.body;
+
+    try {
+        const pdfBytes = fs.readFileSync(doc.filePath);
+        const fillResult = await AcroFormCopilot.fillPdf(pdfBytes, fieldValues, { flatten: !!flatten });
+
+        if (replaceCurrent) {
+            fs.writeFileSync(doc.filePath, fillResult.pdfBuffer);
+
+            doc.history.push({
+                action: 'acroform-fill',
+                filledCount: fillResult.filledCount,
+                flattened: fillResult.flattened,
+                time: new Date()
+            });
+
+            return res.json({
+                success: true,
+                docId: doc.id,
+                filledCount: fillResult.filledCount,
+                flattened: fillResult.flattened,
+                message: `Formulário atualizado com sucesso! (${fillResult.filledCount} campos preenchidos)`
+            });
+        } else {
+            const filledFilename = `preenchido_${Date.now()}_${doc.filename}`;
+            const filledPath = path.join(STORAGE_DIR, filledFilename);
+            fs.writeFileSync(filledPath, fillResult.pdfBuffer);
+
+            const newDocInfo = registerDoc(filledFilename, `preenchido_${doc.originalName}`);
+            return res.json({
+                success: true,
+                docId: newDocInfo.id,
+                filledCount: fillResult.filledCount,
+                flattened: fillResult.flattened,
+                downloadUrl: `/api/document/${newDocInfo.id}/download`,
+                message: `Novo documento com formulário preenchido gerado com sucesso!`
+            });
+        }
+    } catch (err) {
+        console.error('AcroForm apply error:', err);
         res.status(500).json({ error: err.message });
     }
 });

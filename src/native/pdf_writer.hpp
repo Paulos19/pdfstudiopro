@@ -181,6 +181,111 @@ public:
 
         return true;
     }
+
+    static bool writePdfMemory(std::map<int, IndirectObject>& objects,
+                               ObjectPtr rootCatalog,
+                               std::vector<uint8_t>& outBuffer,
+                               ObjectPtr infoDict = nullptr) {
+        std::ostringstream out;
+        std::string header = "%PDF-1.7\n%\xE2\xE3\xCF\xD3\n";
+        out.write(header.c_str(), header.size());
+
+        std::map<int, size_t> xrefOffsets;
+        int maxObjNum = 0;
+
+        for (auto& pair : objects) {
+            int num = pair.first;
+            if (num > maxObjNum) maxObjNum = num;
+            auto& ind = pair.second;
+            
+            size_t offset = (size_t)out.tellp();
+            xrefOffsets[num] = offset;
+
+            std::string objHeader = std::to_string(num) + " " + std::to_string(ind.genNum) + " obj\n";
+            out.write(objHeader.c_str(), objHeader.size());
+
+            if (ind.object && ind.object->type == ObjectType::Stream) {
+                std::vector<uint8_t> compressed;
+                bool isFlate = false;
+                if (ind.object->dictValue.count("Filter")) {
+                    auto f = ind.object->dictValue["Filter"];
+                    if (f->type == ObjectType::Name && (f->strValue == "FlateDecode" || f->strValue == "/FlateDecode")) {
+                        isFlate = true;
+                    }
+                }
+
+                if (isFlate && !ind.object->streamData.empty()) {
+                    Flate::compress(ind.object->streamData, compressed);
+                } else {
+                    compressed = ind.object->streamData;
+                }
+
+                ind.object->dictValue["Length"] = Object::createNumber((double)compressed.size());
+
+                std::string dictStr = serializeObject(ind.object) + "\nstream\r\n";
+                out.write(dictStr.c_str(), dictStr.size());
+
+                if (!compressed.empty()) {
+                    out.write((char*)compressed.data(), compressed.size());
+                }
+
+                std::string streamEnd = "\r\nendstream\n";
+                out.write(streamEnd.c_str(), streamEnd.size());
+            } else {
+                std::string objBody = serializeObject(ind.object) + "\n";
+                out.write(objBody.c_str(), objBody.size());
+            }
+
+            std::string objFooter = "endobj\n";
+            out.write(objFooter.c_str(), objFooter.size());
+        }
+
+        // Write XRef table
+        size_t xrefStart = (size_t)out.tellp();
+        std::ostringstream xref;
+        xref << "xref\n";
+        xref << "0 " << (maxObjNum + 1) << "\n";
+        xref << "0000000000 65535 f \n";
+
+        for (int i = 1; i <= maxObjNum; ++i) {
+            if (xrefOffsets.count(i)) {
+                xref << std::setw(10) << std::setfill('0') << xrefOffsets[i] << " 00000 n \n";
+            } else {
+                xref << "0000000000 00000 f \n";
+            }
+        }
+
+        // Trailer
+        xref << "trailer\n<<\n";
+        xref << "  /Size " << (maxObjNum + 1) << "\n";
+        if (rootCatalog) {
+            int rootNum = 1;
+            for (auto& pair : objects) {
+                if (pair.second.object == rootCatalog) {
+                    rootNum = pair.first;
+                    break;
+                }
+            }
+            xref << "  /Root " << rootNum << " 0 R\n";
+        }
+        if (infoDict) {
+            for (auto& pair : objects) {
+                if (pair.second.object == infoDict) {
+                    xref << "  /Info " << pair.first << " 0 R\n";
+                    break;
+                }
+            }
+        }
+        xref << ">>\n";
+        xref << "startxref\n" << xrefStart << "\n%%EOF\n";
+
+        std::string xrefStr = xref.str();
+        out.write(xrefStr.c_str(), xrefStr.size());
+
+        std::string resStr = out.str();
+        outBuffer.assign(resStr.begin(), resStr.end());
+        return true;
+    }
 };
 
 } // namespace pdf
