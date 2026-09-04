@@ -108,8 +108,15 @@ app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
-// Route '/' and '/landing' -> Serve Landing Page
-app.get(['/', '/landing'], (req, res) => {
+// Route '/' and '/landing' -> Serve Landing Page (or Studio directly if in Desktop/Electron)
+app.get('/', (req, res) => {
+    if (process.env.IS_ELECTRON === 'true') {
+        return res.sendFile(path.join(__dirname, '..', '..', 'public', 'index.html'));
+    }
+    res.sendFile(path.join(__dirname, '..', '..', 'public', 'landing.html'));
+});
+
+app.get('/landing', (req, res) => {
     res.sendFile(path.join(__dirname, '..', '..', 'public', 'landing.html'));
 });
 

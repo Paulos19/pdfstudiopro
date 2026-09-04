@@ -1,3 +1,4 @@
+process.env.IS_ELECTRON = 'true';
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -34,12 +35,12 @@ function createWindow() {
     // Remove default native menu for sleek studio look (or keep keyboard shortcuts)
     mainWindow.setMenuBarVisibility(false);
 
-    // Load web UI served locally
-    mainWindow.loadURL(`http://localhost:${SERVER_PORT}`);
+    // Load Studio App directly (bypass landing page for desktop version)
+    mainWindow.loadURL(`http://localhost:${SERVER_PORT}/app`);
 
     mainWindow.webContents.on('did-fail-load', () => {
         setTimeout(() => {
-            mainWindow.loadURL(`http://localhost:${SERVER_PORT}`);
+            mainWindow.loadURL(`http://localhost:${SERVER_PORT}/app`);
         }, 1000);
     });
 
