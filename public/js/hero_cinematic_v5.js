@@ -792,6 +792,7 @@
     scene.add(ropeGroup);
 
     let ROPE_X = -5.05;
+    let targetCamZ = 7.8;
     let initialLetterScale = 1.0;
     let initialPosX_P = -2.55;
     let initialPosX_D = 0.0;
@@ -819,25 +820,46 @@
         });
     }
 
-    function updateResponsiveLayout() {
-        const aspect = window.innerWidth / Math.max(1, window.innerHeight);
-        const visibleHeight = 2.0 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
-        const visibleWidth = visibleHeight * aspect;
-
+    function fallbackDockPositions(visibleWidth, visibleHeight) {
         if (window.innerWidth <= 768) {
-            initialLetterScale = Math.min(0.55, Math.max(0.36, (visibleWidth * 0.70) / 5.2));
-            const spacing = Math.min(1.05, (visibleWidth * 0.30));
-            initialPosX_P = -spacing;
-            initialPosX_D = 0.0;
-            initialPosX_F = spacing;
-
-            ROPE_X = - (visibleWidth / 2) + 0.22;
-
             dockPosY = (visibleHeight / 2) - 0.30;
             dockPosX_P = - (visibleWidth / 2) + 0.32;
             dockPosX_D = - (visibleWidth / 2) + 0.46;
             dockPosX_F = - (visibleWidth / 2) + 0.60;
             logoScale = 0.052;
+        } else {
+            dockPosY = 2.19;
+            dockPosX_P = -4.72;
+            dockPosX_D = -4.50;
+            dockPosX_F = -4.28;
+            logoScale = 0.095;
+        }
+    }
+
+    function updateResponsiveLayout() {
+        const aspect = window.innerWidth / Math.max(1, window.innerHeight);
+
+        // In portrait mode (mobile/tablet), increase camera Z to provide comfortable horizontal breathing room
+        if (aspect < 1.0) {
+            targetCamZ = 7.8 * Math.max(1.0, 0.78 / aspect);
+        } else {
+            targetCamZ = 7.8;
+        }
+        camera.position.z = targetCamZ;
+
+        const visibleHeight = 2.0 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
+        const visibleWidth = visibleHeight * aspect;
+
+        if (window.innerWidth <= 768) {
+            initialLetterScale = Math.min(0.52, Math.max(0.36, visibleWidth * 0.105));
+            const spacing = Math.min(1.05, visibleWidth * 0.22);
+            // Center group slightly offset to the right so rope on left has ample clearance
+            const centerShift = Math.min(0.30, visibleWidth * 0.06);
+            initialPosX_P = -spacing + centerShift;
+            initialPosX_D = centerShift;
+            initialPosX_F = spacing + centerShift;
+
+            ROPE_X = - (visibleWidth / 2) + Math.min(0.40, visibleWidth * 0.08);
         } else {
             initialLetterScale = 1.0;
             initialPosX_P = -2.55;
@@ -845,12 +867,42 @@
             initialPosX_F = 2.55;
 
             ROPE_X = -5.05;
-            dockPosY = 2.19;
-            dockPosX_P = -4.72;
-            dockPosX_D = -4.50;
-            dockPosX_F = -4.28;
-            logoScale = 0.095;
         }
+
+        // Exact 3D docking position matching #logoAnchorSlot in the top navbar
+        const isMobile = window.innerWidth <= 768;
+        const slotEl = document.getElementById('logoAnchorSlot');
+        let slotW = isMobile ? 58 : 82;
+        let slotH = isMobile ? 28 : 34;
+        let slotCenterX = isMobile ? (16 + slotW * 0.5) : (48 + slotW * 0.5);
+        // Optical vertical center: on desktop, perspective from camera looking slightly up requires +5px offset to perfectly align with STUDIO PRO
+        let slotCenterY = isMobile ? (10 + slotH * 0.5) : (13 + slotH * 0.5 + 5);
+
+        if (slotEl) {
+            const rect = slotEl.getBoundingClientRect();
+            if (rect.width > 0) slotW = rect.width;
+            if (rect.height > 0) slotH = rect.height;
+            if (rect.left > 0) slotCenterX = rect.left + slotW * 0.5;
+            if (rect.top >= 0 && rect.top < 80) {
+                slotCenterY = rect.top + slotH * 0.5 + (isMobile ? 0 : 5);
+            }
+        }
+
+        const dockWorldX = ((slotCenterX / Math.max(1, window.innerWidth)) - 0.5) * visibleWidth;
+        const dockWorldY = (0.5 - (slotCenterY / Math.max(1, window.innerHeight))) * visibleHeight;
+
+        dockPosY = dockWorldY;
+        const slotWidth3D = (slotW / Math.max(1, window.innerWidth)) * visibleWidth;
+        const spacing3D = isMobile ? (slotWidth3D * 0.25) : (slotWidth3D * 0.26);
+
+        dockPosX_P = dockWorldX - spacing3D;
+        dockPosX_D = dockWorldX;
+        dockPosX_F = dockWorldX + spacing3D;
+
+        const slotHeight3D = (slotH / Math.max(1, window.innerHeight)) * visibleHeight;
+        logoScale = isMobile
+            ? Math.max(0.036, Math.min(0.070, (slotHeight3D * 0.70) / 2.7))
+            : Math.max(0.038, Math.min(0.060, (slotHeight3D * 0.65) / 2.7));
 
         for (let ri = 0; ri < ROPE_NODES; ri++) {
             ropeNodes[ri].basePos.x = ROPE_X;
@@ -870,7 +922,9 @@
         bumpScale: 0.05,
         color: 0xBFAC7E,
         roughness: 0.90,
-        metalness: 0.0
+        metalness: 0.0,
+        transparent: true,
+        opacity: 1.0
     });
 
     // 3 Individual Meshes for the 3 Helical Hawser Strands
@@ -1149,14 +1203,23 @@
         return idx;
     }
 
+    function getPointerCoords(e) {
+        if (e.touches && e.touches.length > 0) {
+            return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        if (e.changedTouches && e.changedTouches.length > 0) {
+            return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+        }
+        return { x: e.clientX !== undefined ? e.clientX : 0, y: e.clientY !== undefined ? e.clientY : 0 };
+    }
+
     function onPointerDown(e) {
-        const cx = e.clientX !== undefined ? e.clientX : (e.touches ? e.touches[0].clientX : 0);
-        const cy = e.clientY !== undefined ? e.clientY : (e.touches ? e.touches[0].clientY : 0);
-        updateMouseWorld(cx, cy);
+        const pt = getPointerCoords(e);
+        updateMouseWorld(pt.x, pt.y);
 
         if (checkRopeHit(mouseWorld)) {
             isDraggingRope = true;
-            dragStartY = cy;
+            dragStartY = pt.y;
             dragStartScrollY = window.scrollY;
             grabbedNodeIndex = findClosestRopeNode(mouseWorld);
 
@@ -1172,8 +1235,9 @@
 
     function onPointerMove(e) {
         mouseActive = true;
-        const cx = e.clientX !== undefined ? e.clientX : (e.touches ? e.touches[0].clientX : 0);
-        const cy = e.clientY !== undefined ? e.clientY : (e.touches ? e.touches[0].clientY : 0);
+        const pt = getPointerCoords(e);
+        const cx = pt.x;
+        const cy = pt.y;
         updateMouseWorld(cx, cy);
 
         if (isDraggingRope) {
@@ -1244,10 +1308,15 @@
                     nav.style.opacity = Math.min(1, navAlpha);
                     nav.style.pointerEvents = navAlpha > 0.6 ? 'all' : 'none';
                     nav.style.transform = 'translateY(' + ((1 - Math.min(1, navAlpha)) * -20) + 'px)';
-                    if (scrollProgress > 0.45) {
-                        nav.classList.add('is-scrolled');
-                    } else {
-                        nav.classList.remove('is-scrolled');
+                    const wasScrolled = nav.classList.contains('is-scrolled');
+                    const isNowScrolled = scrollProgress > 0.45;
+                    if (wasScrolled !== isNowScrolled) {
+                        if (isNowScrolled) {
+                            nav.classList.add('is-scrolled');
+                        } else {
+                            nav.classList.remove('is-scrolled');
+                        }
+                        updateResponsiveLayout();
                     }
                 }
 
@@ -1269,10 +1338,17 @@
 
         window.addEventListener('scroll', function () {
             const nav = document.getElementById('mainLandingNavbar');
-            if (nav && window.scrollY > 180) {
-                nav.classList.add('is-scrolled');
-            } else if (nav && scrollProgress <= 0.45) {
-                nav.classList.remove('is-scrolled');
+            if (nav) {
+                const wasScrolled = nav.classList.contains('is-scrolled');
+                const isNowScrolled = window.scrollY > 180;
+                if (wasScrolled !== isNowScrolled) {
+                    if (isNowScrolled) {
+                        nav.classList.add('is-scrolled');
+                    } else if (scrollProgress <= 0.45) {
+                        nav.classList.remove('is-scrolled');
+                    }
+                    updateResponsiveLayout();
+                }
             }
         }, { passive: true });
     }
@@ -1548,14 +1624,30 @@
         // Update bottom stopper knot position
         bottomKnot.position.copy(ropeNodes[ROPE_NODES - 1].pos);
 
+        // Reel rope up and fade out smoothly on scroll so it never obstructs Section 2
+        const isMobileScreen = window.innerWidth <= 768;
+        if (scrollProgress > 0.04) {
+            const reelProgress = Math.min(1.0, (scrollProgress - 0.04) / 0.30);
+            const reelEase = 1 - Math.pow(1 - reelProgress, 2);
+            ropeGroup.position.y = reelEase * (isMobileScreen ? 14.0 : 9.0);
+            ropeMat.opacity = Math.max(0, 1.0 - reelEase * 1.05);
+            ropeGroup.visible = ropeMat.opacity > 0.01;
+        } else {
+            ropeGroup.position.y = 0;
+            ropeMat.opacity = 1.0;
+            ropeGroup.visible = true;
+        }
+
         // Ground shadow fade on scroll
         if (ground) {
             ground.material.opacity = Math.max(0, (1.0 - scrollProgress * 2.5) * 0.12);
         }
 
         // 11.7 Letter motions & Scroll telling (PDF Trio Docking into Navbar)
-        const fAmp = (1 - scrollProgress) * 0.065;
-        const sEase = Math.min(1.0, Math.pow(scrollProgress, 0.75));
+        // Docking completes smoothly between scrollProgress 0.02 and 0.38 as Section 2 appears
+        const dockT = Math.min(1.0, Math.max(0, (scrollProgress - 0.02) / 0.36));
+        const sEase = dockT * dockT * (3 - 2 * dockT);
+        const fAmp = (1 - sEase) * 0.065;
 
         if (letterP) {
             const pIdleY = Math.sin(t * 1.2) * fAmp;
@@ -1610,41 +1702,45 @@
                 letterF.scale.setScalar(initialLetterScale);
             }
         }
-        // 11.75 Animate Playful 3D Duolingo Objects (Rise with Section 2)
+        // 11.75 Animate Playful 3D Duolingo Objects (Rise with Section 2, hidden on mobile)
         if (playfulGroup) {
-            const targetGroupY = THREE.MathUtils.lerp(-6.0, 0.0, Math.min(1.0, scrollProgress * 1.5));
-            playfulGroup.position.y += (targetGroupY - playfulGroup.position.y) * 0.08;
-            playfulGroup.visible = scrollProgress > 0.04;
+            if (isMobileScreen) {
+                playfulGroup.visible = false;
+            } else {
+                const targetGroupY = THREE.MathUtils.lerp(-6.0, 0.0, Math.min(1.0, scrollProgress * 1.5));
+                playfulGroup.position.y += (targetGroupY - playfulGroup.position.y) * 0.08;
+                playfulGroup.visible = scrollProgress > 0.04;
 
-            for (let pi = 0; pi < playfulItems.length; pi++) {
-                const item = playfulItems[pi];
-                const bobY = Math.sin(t * item.floatSpeed + item.floatPhase) * 0.18;
-                const bobX = Math.cos(t * item.floatSpeed * 0.7 + item.floatPhase) * 0.08;
-                item.mesh.position.x = item.basePos.x + bobX;
-                item.mesh.position.y = item.basePos.y + bobY;
-                item.mesh.rotation.x += item.rotSpeed * dt * 0.8;
-                item.mesh.rotation.y += item.rotSpeed * dt;
+                for (let pi = 0; pi < playfulItems.length; pi++) {
+                    const item = playfulItems[pi];
+                    const bobY = Math.sin(t * item.floatSpeed + item.floatPhase) * 0.18;
+                    const bobX = Math.cos(t * item.floatSpeed * 0.7 + item.floatPhase) * 0.08;
+                    item.mesh.position.x = item.basePos.x + bobX;
+                    item.mesh.position.y = item.basePos.y + bobY;
+                    item.mesh.rotation.x += item.rotSpeed * dt * 0.8;
+                    item.mesh.rotation.y += item.rotSpeed * dt;
 
-                // Mouse repulsion / proximity bounce
-                if (mouseActive) {
-                    const mdx = item.mesh.position.x - mouseWorld.x;
-                    const mdy = (item.mesh.position.y + playfulGroup.position.y) - mouseWorld.y;
-                    const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
-                    if (mDist < 1.2) {
-                        const mForce = (1.2 - mDist) * 0.15;
-                        item.mesh.position.x += mdx * mForce;
-                        item.mesh.position.y += mdy * mForce;
+                    // Mouse repulsion / proximity bounce
+                    if (mouseActive) {
+                        const mdx = item.mesh.position.x - mouseWorld.x;
+                        const mdy = (item.mesh.position.y + playfulGroup.position.y) - mouseWorld.y;
+                        const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
+                        if (mDist < 1.2) {
+                            const mForce = (1.2 - mDist) * 0.15;
+                            item.mesh.position.x += mdx * mForce;
+                            item.mesh.position.y += mdy * mForce;
+                        }
                     }
                 }
             }
         }
 
-        // 11.8 Camera parallax
+        // 11.8 Camera parallax and dynamic responsive depth
         const targetCamX = mouseActive ? mouse.x * 0.22 : 0;
         const targetCamY = mouseActive ? mouse.y * 0.15 : 0;
         camera.position.x += (targetCamX - camera.position.x) * 0.05;
         camera.position.y += (targetCamY - camera.position.y) * 0.05;
-        camera.position.z = 7.8;
+        camera.position.z += (targetCamZ - camera.position.z) * 0.08;
         camera.lookAt(0, 0, 0);
 
         renderer.render(scene, camera);
