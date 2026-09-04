@@ -1499,12 +1499,14 @@ app.get('/api/document/:id/download', (req, res) => {
 });
 
 // 12.1. Download suite binaries (.zip, setup.exe, portable.exe)
+const GITHUB_RELEASES_URL = 'https://github.com/Paulos19/pdfstudiopro/releases';
+
 app.get('/api/download/zip', (req, res) => {
     const zipPath = path.join(__dirname, '..', '..', 'dist', 'PDF_Studio_Pro_v1.0.2_Suite.zip');
     if (fs.existsSync(zipPath)) {
         res.download(zipPath, 'PDF_Studio_Pro_v1.0.2_Suite.zip');
     } else {
-        res.status(404).send('Arquivo ZIP não encontrado.');
+        res.redirect(`${GITHUB_RELEASES_URL}`);
     }
 });
 
@@ -1513,7 +1515,7 @@ app.get('/api/download/setup', (req, res) => {
     if (fs.existsSync(setupPath)) {
         res.download(setupPath, 'PDF Studio Pro Setup 1.0.2.exe');
     } else {
-        res.status(404).send('Instalador não encontrado.');
+        res.redirect(`${GITHUB_RELEASES_URL}`);
     }
 });
 
@@ -1522,7 +1524,7 @@ app.get('/api/download/portable', (req, res) => {
     if (fs.existsSync(portPath)) {
         res.download(portPath, 'PDF Studio Pro Portable 1.0.2.exe');
     } else {
-        res.status(404).send('Executável portátil não encontrado.');
+        res.redirect(`${GITHUB_RELEASES_URL}`);
     }
 });
 
